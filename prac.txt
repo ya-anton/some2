@@ -1,3 +1,4 @@
+|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||\
 Programm RAID (mirorr)
 fdisk /dev/sdb
 t #type of partition  'fd' -linux RAID
