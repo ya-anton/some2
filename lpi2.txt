@@ -1,0 +1,1717 @@
+##---200.1 Measure and Troubleshoot Resource Usage---
+lsb_release -a   #print distribution-specific information
+/etc/os-release
+who
+w; uptime #load average (1,5,15min)
+/proc/uptime # secs of uptime, secs of idle
+netstat -i #interface
+netstat -s #stat packets
+lsof
+lsblk #list block dev
+ps -aux |wc -l
+#---SUSE-&-UBUNTU---information-of-package-
+zipper info sysstat
+zipper --no-remote in sysstat  #local insall
+rpm -ql sysstat  #contents of package
+dpkg -L sysstat  #contents of package
+#------
+/etc/default/sysstat
+  ENABLED="true"
+sar -d     # stat blk
+sar -p -d  # stat blk with pretty print
+sar <sec> <count>
+sar -u 1 3 # CPU utilization 1 sec 3 count
+sar -w 1 3 # context switches per second
+sar -r 1 3 # memory  stats
+sar -S 1 3 # swap stats
+sar -b 1 3 # I/O and transfer rate statistics
+sar -q     # queue length
+sar -w -f /var/log/sa/sa05  #from the file
+iostat <sec> <count>  # stats of CPU and devices
+iostat -c 1  # CPU every 1 sec
+iostat -d 1  # blk activity every 1 sec
+mpstat  #processors related statistics
+mpstat -P ALL <sec> <count>
+/var/log/sa
+vmstat
+r: The number of runnable processes (in queue)  r<5 Load Average
+b: The number of processes in uninterruptible sleep (blocked)
+bi: Blocks received from a block device (blocks/s).
+bo: Blocks sent to a block device (blocks/s).
+us+sy=~90 (very hight load)
+wa<52 (wait time for ending i-o on disk)
+vmstat -s #recommended exec twice: before task and after
+
+###--NETWORK-PERFORMANCE--
+netstat -plunt
+lsof -i #(4,6)
+iptables -nvL INPUT
+iptables -Z #flush counters
+netstat -i
+#--ss-------
+ss -t -a #Display all TCP sockets
+ss -t -a -Z #Display all TCP sockets with process SELinux security contexts
+ss -u -a #Display all UDP sockets
+ss -o state established '( dport = :ssh or sport = :ssh )' 
+#Display all established ssh connections
+ss -x src /tmp/.X11-unix/* #Find all local processes connected to X server
+ss -o state fin-wait-1 '( sport = :http or sport = :https )' dst 193.233.7/24
+#List all the tcp sockets in state FIN-WAIT-1 for our apache to network 193.233.7/24 and look at their timers.
+#-----------
+
+###---200.2 Predict future resource needs---
+df -h
+strace sar 2>&1 | grep open
+
+
+###---201.1 Kernel Components----
+uname -r
+
+
+###---201.2 Compiling a kernel---
+wget 'http://www.kernel.org/some.tar.xz'
+cd /usr/src/linux
+make mrproper
+cp /boot/config-old ./config
+mv config .config
+make menuconfig
+make
+#make modules
+make modules_install
+make install
+vi /boot/grug/grub.cfg #or update-grub or grub-mkconfig
+#--------
+##              file                ver-kernel   
+mkinitrd /boot/initrd-2.6.35.4.img 2.6.35.4
+mkinitramfs -o /boot/initramfs-2.6.35.4.img 2.6.35.4
+genkernel initramfs
+##
+depmod  #regenerate modules.dep (dependencies of kernel modules)
+#---preparing a kernel package
+#rpm-pkg, binrpm-pkg, and deb-pkg
+#---dynamic kernel module support (DKMS)
+$ wget http://tenet.dl.sourceforge.net/project/e1000/ixgbe%20stable/4.3.15/ixgbe-4.3.15.tar.gz
+$ sudo tar -xf ixgbe-4.3.15.tar.gz -C /usr/local/src
+$ sudo mv /usr/local/src/ixgbe-4.3.15/src /usr/src/ixgbe-4.3.15 
+$ sudo vi /usr/src/ixgbe-4.3.15/dkms.conf
+ PACKAGE_NAME="ixgbe"
+ PACKAGE_VERSION="4.3.15"
+ BUILT_MODULE_NAME[0]="ixgbe"
+ DEST_MODULE_LOCATION[0]="/kernel/drivers/net/ethernet/intel/ixgbe/"
+ AUTOINSTALL="yes"
+$ sudo dkms add -m ixgbe -v 4.3.15  #or $ sudo dkms add ixgbe/4.3.15 
+$ sudo dkms build ixgbe/4.3.15 
+$ sudo dkms install ixgbe/4.3.15 
+$ dkms status
+
+
+
+#----Topic 202: System Startup---------
+#--------------------------------------
+Набор Syslinux содержит сделующие загрузчики ("derivatives"), каждый ориентирован на определённый загрузочный носитель:
+    SYSLINUX - файловая система MS-DOS/Windows FAT 
+    PXELINUX - сетевая загрузка через PXE 
+    ISOLINUX - ISO9660 CD-ROM 
+    EXTLINUX - ФАйловая система Linux ext2/ext3 
+#--EXTLINUX--
+EXTLINUX supports:
+[3.00+] ext2/3,
+[4.00+] FAT12/16/32, ext2/3/4, Btrfs,
+[4.06+] FAT12/16/32, NTFS, ext2/3/4, Btrfs,
+[5.01+] FAT12/16/32, NTFS, ext2/3/4, Btrfs, XFS,
+[6.03+] FAT12/16/32, NTFS, ext2/3/4, Btrfs, XFS, UFS/FFS,
+1. The installer runs on a *mounted* filesystem. 
+mkdir -p /point/extlinux
+extlinux --install /point/extlinux
+2. The configuration file is called "extlinux.conf", and is expected to be found in the same directory
+3. Pathnames can be absolute or relative
+4. EXTLINUX supports symbolic links
+5. EXTLINUX has "boot-once" support
+   extlinux --once 'command' /boot/extlinux
+   extlinux --clear-once /boot/extlinux
+   extlinux --reset-adv /boot/extlinux
+cat mbr.bin > /dev/XXX
+#--PXELINUX--
+http://www.syslinux.org/wiki/index.php?title=PXELINUX
+#--SYSLINUX--
+Note: The Device should be unmounted before executing the syslinux command.
+syslinux [options] <Device_Or_Image>
+syslinux options:
+-t --offset      #Offset of the file system on the device
+-d --directory   #Directory for installation target
+-i --install     #Install over the current bootsector
+-U --update      #Update a previous installation
+-z --zip         #Force zipdrive geometry (-H 64 -S 32)
+-S --sectors=#   #Force the number of sectors per track
+-H --heads=#     #Force number of heads
+-s --stupid      #Slow, safe and stupid mode
+-r --raid        #Fall back to the next device on boot failure 
+--once=...       #Execute a command once upon boot
+-O --clear-once  #Clear the boot-once command
+--reset-adv      #Reset auxilliary data
+-M --menu-save=  #Set the label to select as default on the next boot
+-f --force       #Ignore precautions.
+#Example:
+syslinux --directory /boot/syslinux/ --install /dev/sdb1
+#-------------------------------
+#EFI------------------
+UEFI SHELL
+<UEFI_SYSTEM_PARTITION>/shellx64.efi (mostly /boot/efi/shellx64.efi)
+#To dump a list of current boot entries -
+Shell> bcfg boot dump -v
+#To add a boot menu entry for grub2's grubx64.efi (for example) as 4th (numbeering starts from zero) option in the boot menu
+Shell> bcfg boot add 3 fs0:\EFI\arch\grubx64.efi "Arch Linux (GRUB2)"
+#where fs0: is the mapping corresponding to the UEFI System Partition and \EFI\arch\grubx64.efi is the file to be launched.
+#To remove the 4th boot option
+Shell> bcfg boot rm 3
+To move the boot option #3 to #0 (i.e. 1st or the default entry in the UEFI Boot menu)
+Shell> bcfg boot mv 3 0
+#For bcfg help
+Shell> help bcfg -v -b
+Shell> bcfg -? -v -b
+ls,cp,mkdir,cd,mount..etc..
+#--------------------
+efibootmgr #manipulate the EFI Boot Manager 
+efibootmgr [-a] [-A] [-b XXXX] [-B XXXX] [-c] [-d DISK] [-e1|3|-1] [-E NUM] [-g] [-H XXXX] [-iNAME] [-l NAME] [-L LABEL] [-n XXXX] [-N] [-o XXXX,YYYY,ZZZZ...] [-O] [-p PART] [-q] [-t seconds] [-T] [-u] [-U XXXX] [-v] [-V] [-w] [-@ file]
+#Displaying the Current Settings
+efibootmgr
+#Creating a New Boot Option
+efibootmgr -c
+#Changing the Boot Order
+efibootmgr -o 3,4
+#Changing the Boot Order for the Next Boot Only
+efibootmgr -n 4
+#Deleting a Boot Option
+efibootmgr -b 4 -B
+#Creating Network Boot Entries
+efibootmgr -c -i eth0 -H 222F -U 500 -L netboot
+#-------------------
+systemctl rescue
+systemctl isolate rescue.target
+systemctl --no-wall rescue
+systemctl emergency
+systemctl isolate emergency.target
+systemctl --no-wall emergency
+systemctl set-default name.target
+systemctl list-units --type target --all
+systemctl get-default
+#NVMe--SSD--
+nvmectl devlist           #Display a list of NVMe controllers and namespaces along with their device nodes
+nvmectl identify nvme0  #Display a human-readable summay of the nvme0 IDENTIFY_CONTROLLER data.
+nvmectl identify -x -v nvme0ns1 #Display an hexadecimal dump of the nvme0 IDENTIFY_NAMESPACE data for namespace 1.
+nvmectl logpage -p 0xc1 -v wdc nvme0 #Display a human-readable summary of the nvme0's wdc-specific advanced SMART data.
+nvmectl logpage -p 1 -x nvme0 #Display a hexadecimal dump of the nvme0 controller's Error Information Log.
+nvmectl logpage -p 0xcb -b nvme0 > /tmp/page-cb.bin #Print the contents of vendor specific page 0xcb as binary data on standard out.  Redirect it to a temporary file
+nvmectl power -l nvme0   #List all the current power modes.
+nvmectl power -p 3 nvme0 #Set the current power mode
+nvmectl power nvme0      #Get the current power mode
+
+
+
+
+ 
+
+
+
+#---203.1 Operating the Linux filesystem
+#how to define the current filesystem???
+file -s /dev/sda1
+fsck -N /dev/sda1
+cat /etc/mtab
+#---
+mount [-alrsvw] [-t fstype] [-o options] [device] [mountpoint]
+#options: umask,dmask,fmask,loop,ro,rw,remount,uid,gid,conv=code(b,t,a),users,credentials=/etc/creds(smbfs,cifs),(or username=***,password=***)
+#---options of fstab
+# user,users,owner,noauto
+umount -f /point #--force umount (unavailable server)
+
+#--autofs (package)--(auto mounting,unmounting)
+/etc/auto.smb /etc/auto.net /etc/auto.master /etc/auto.servers
+#The /etc/auto.master file on ganymede.example.com contains:
+ /mnt/net /etc/auto.servers
+#The /etc/auto.servers file includes:
+ templates europa.example.com:/data/templates
+#What file should a user on ganymede.example.com access to read the /data/templates/iceflow.txt file on europa.example.com?
+ /mnt/net/templates/iceflow.txt
+
+#--CRYPTSETUP--
+apt install cryptsetup
+yum install cryptsetup-luks
+cryptsetup опции операция параметры_операции
+#основные операции, которые можно сделать с помощью этой утилиты:
+    luksFormat - создать зашифрованный раздел luks linux
+    luksOpen - подключить виртуальное устройство (нужен ключ)
+    luksClose - закрыть виртуальное устройство luks linux
+    luksAddKey - добавить ключ шифрования
+    luksRemoveKey - удалить ключ шифрования
+    luksUUID - показать UUID раздела
+    luksDump - создать резервную копию заголовков LUKS
+#Шифрование диска Linux
+#Создание раздела
+cryptsetup -y -v luksFormat /dev/sda6
+cryptsetup luksOpen /dev/sda6 device777  #подключить зашифрованный диск
+ls -l /dev/mapper/device777              #проверяем..
+cryptsetup -v status backup2
+mount /dev/mapper/backup2 /backup2
+umount /backup2
+cryptsetup luksClose backup2
+
+
+
+
+
+
+#--Checking Filesystems for Errors--
+fsck.fstype
+fsck [-sACVRTNP] [-t fstype] [--] [fsck-options] filesystems
+#-A check all fstab, -C progress indicator, -N show what would do
+e2fsck
+xfs_check
+xfs_repair
+dumpe2fs [options -h] device  #to learn more about ext2,3,4
+xfs_info device            #                    xfs
+xfs_metadump
+debugreiserfs [ -JpuqS ] [ -B file ] [ -1 blocknum ] device
+#--tuning-fs
+tune2fs [options] device  #ext2,3,4
+tune2fs -c 26 /dev/sdb1   #change the maximum mount count value to 26
+xfs_admin
+reiserfstune 
+#--Interactively Debugging a Filesystem
+debugfs device  # ext2,3,4
+ stat filename
+ undelete <indode> <newname>
+ lsdel (or list_deleted_inodes)
+ write <internal-file> <external-file>  #extract file
+#--Manipulating Swap Space
+mkswap device
+swapon device
+swapoff device
+#--Managing Optical Discs
+(genisofs)
+mkisofs -J -r -V “volume name” -o ../image.iso ./
+cdrecord dev=/dev/dvdrw speed=4 ../image.iso
+#-J and -udf -understanding by windows; -hfs - just apple
+#--or
+growisofs -speed=4 -Z /dev/dvdrw -J -r -V “volume name” ./
+#--or
+growisofs -speed=4 -Z /dev/dvdrw=source-file.iso
+#--Managing Devices with udev--
+/etc/udev/rules.d
+/lib/usev/rules.d
+udevadm info -a -p $(udevadm info -q path -n /dev/input/mouse1)
+# ==,!= corpares ,= ,+=, assigments := assign and disallow changes
+/etc/udev/rules.d/99-my.rules
+  SUBSYSTEM!=”usb_device”, ACTION!=”add”, GOTO=”minolta_rules_end”
+  ATTR{idVendor}==”0686”, ATTR{idProduct}==”400e”, SYMLINK+=”scan5400”
+  MODE=”0660”, OWNER=”lisa”, GROUP=”scanner”
+  LABEL=”minolta_rules_end”
+  SUBSYSTEM==”net”, ACTION==”add”, ATTR{address}==”00:03:47:b1:e3:d8”,
+  KERNEL==”eth*”, NAME=”eth0”
+  SUBSYSTEM==”net”, ACTION==”add”, ATTR{address}==”00:e0:4d:a3:22:c5”,
+  KERNEL=="eth*”, NAME=”eth1”
+udevadm monitor 
+#--These lines summarize the information files (in /class and /devices, but not in /dev)
+
+#--Assembling a RAID Array---
+mdadm --create /dev/md0 --level=5 --raid-devices=3 /dev/sda6 /dev/sdc1 /dev/sdd1
+/proc/mdstat  #-STAT-of-mdadm
+
+#----------Logical Volume Manager-----------------
+LVM uses data structures at three different levels:
+ --Physical Volumes
+ --Volume Groups
+ --Logical Volumes
+The MBR type code for LVM partitions is 0x8E
+
+pvchange 
+#Changes allocation permissions on a physical volume. You might disallow new allocations if you’re making changes on other volumes and intend to delete one immediately thereafter.
+pvck
+#Checks the physical volume for errors; similar to fsck for filesystems.
+pvcreate 
+#Initializes a partition or other device for use by LVM; similar to mkfs for filesystems.
+pvdisplay
+#Displays information on a physical volume, including the name of the volume group to which it belongs, its capacity, and how much of its capacity is not yet consumed by logical volumes.
+pvmove 
+#Moves data from one physical volume to another one. You might use this prior to retiring a disk to move data off it.
+pvremove 
+#Removes physical volume data structures from a partition; essentially the opposite of pvcreate.
+pvresize 
+#Resizes the physical volume data structures. This command does not resize the partition in which it resides; that must be done before (when enlarging) or after (when shrinking) using pvresize, typically with fdisk.
+pvs 
+#Summarizes information about physical volume. Similar to pvdisplay, but more succinct.
+pvscan 
+#Scans disk partitions for LVM data structures.
+
+#----------------------###########---------------------#
+pvcreate /dev/sda2
+
+vgcfgbackup
+#Backs up volume group metadata, by default to files in /etc/lvm/backup.
+vgcfgrestore 
+#Restores volume group metadata, by default from files in /etc/lvm/backup.
+vgchange 
+#Changes certain volume group attributes. Most importantly, it may be used to manually activate or deactivate a volume group.
+vgck 
+#Checks volume group metadata; similar to fsck for filesystems.
+vgconvert 
+#Converts volume group metadata from one version to another. LVM version 2 (LVM2) is the current version in 2011 and has been for some time.
+vgcreate 
+#Creates a volume group, starting with one or more physical volumes you specify.
+vgdisplay 
+#Displays information on your volume groups, including information on the number of physical devices and logical volumes as well as the total and free space.
+vgexport #Makes a volume group unknown to the system, enabling it to be moved to another computer for integration into its LVM configuration.
+vgextend 
+#Adds physical volumes to an existing volume group.
+vgimport 
+#Makes a volume group known to the system.
+vgimportclone 
+#Imports a volume group, renaming conflicting logical volumes. This may be used if you’ve cloned a volume group for backup purposes and find you need to access the backup.
+vgmerge 
+#Merges two volume groups, one of which must be inactive.
+vgmknodes 
+#Updates the device files in /dev that refer to logical volumes. Normally not called manually.
+vgreduce 
+#Removes one or more unused physical volumes from a volume group.
+vgremove 
+#Completely removes a volume group from the computer; effectively the opposite of vgcreate.
+vgrename
+#Renames a volume group.
+vgs 
+#Displays summary information about a volume group; similar to vgdisplay but with more terse output.
+vgscan 
+#Scans the system for volume groups. Normally unneeded but may be helpful after hot- swapping a new disk.
+vgsplit 
+#Splits a volume group into two; effectively the opposite of vgmerge.
+
+#---------------#####################---------------------#
+vgcreate speaker /dev/sda8 /dev/sdb9   #create volume group
+vgextend speaker /dev/sdc2             #extend volume group
+vgchange -ay            #manual activate volume group in emergency case
+
+lvchange 
+#Changes attributes of a logical volume, such as whether it must be allocated to contiguous sectors and whether it can be written.
+lvconvert 
+#Converts between linear, mirror, and snapshot status.
+lvcreate 
+#Creates a logical volume.
+lvdisplay 
+#Displays verbose information about logical volumes.
+lvextend 
+#Expands the size of a logical volume.
+lvreduce 
+#Shrinks a logical volume.
+lvremove 
+#Deletes a logical volume.
+lvrename 
+#Renames a logical volume.
+lvresize 
+#Resizes a logical volume; does the jobs of both lvextend and lvreduce.
+lvs 
+#Displays a terse summary of logical volume information
+lvscan 
+#Scans all disks for logical volumes.
+
+lvcreate -L 20G -n deb_root speaker
+lvcreate -L 20G -i 2 -n deb_root speaker /dev/sda8 /dev/sdc2
+lvextend -L +10G /dev/speaker/PCLOS
+resize2fs /dev/speaker/PCLOS
+resize2fs /dev/speaker/PCLOS 20G
+lvresize -L 20G /dev/speaker/PCLOS
+lvrename speaker PCLOS SUSE
+lvremove /dev/speaker/SUSE
+lvcreate -L 10G -s -n snappy /dev/speaker/PCLOS #--CREATE-SNAPSHOT
+lvconvert --merge /dev/speaker/snappy           #--use-SNAPSHOT
+
+#--Identifying Disk Resource Use--
+/proc/interrupts
+#to adjust IRQ assignments   /etc/sysctl.conf
+sysctl -a | grep irq
+/proc/dma
+#--Testing Disk Performance--
+hdparm -t /dev/sda  #may also adjust some parametrs
+sdparm
+smartctl -a /dev/sda  #--Monitoring a Disk for Failure---search for PASSED
+
+#---BACKUPs---
+dd if=/dev/sda2 of=/media/backups/sda2-back.img
+dd if=/dev/sda2 | gzip -9 > /media/backups/sda2-back.img.gz
+gunzip /media/backups/sda2-back.img.gz - | dd of=/dev/sda2
+rsync -av ./ user@remote:~/backups/
+find / | cpio -oF /dev/st0
+find /home / /boot /var -xdev | cpio -oF /dev/st0
+tar cvpf /dev/st0 --one-file-system /home / /boot /var
+#--Using mt to Control a Tape Drive
+mt -f /dev/nst0 rewind
+mt -f /dev/nst0 fsf 1
+tar cvlpf /dev/nst0 /directory/to/back/up
+mt -f /dev/nst0 offline
+#These commands rewind the tape, space past the first file, create a new backup, and then unload the tape.
+
+tar cvplf /dev/st0 --listed-incremental /root/inc / /home
+#the second issue copes just new files
+
+cd /; tar xvpf /dev/st0 home/username/filename
+cd /; cpio -ivF /dev/st0 home/username/filename
+
+
+#---205.1 Basic networking configuration----
+#--wireless
+iwlist <device> scan,freq,power,txpower,auth,modu,rate,channel..etc
+iwconfig wlan0 essid NoWires channel 1 mode Managed key s:N1mP7mHNw
+iwconfig wlan0
+Wicd #-some-tool-to-manage-WIFI-nets
+pump, dhclient, and dhcpcd  #-dhcp clients
+/etc/sysconfig/network-scripts/ifcfg-eth0
+  #BOOTPROTO=dhcp
+  DEVICE=eth0
+  BOOTPROTO=static
+  IPADDR=192.168.29.39
+  NETMASK=255.255.255.0
+  NETWORK=192.168.29.0
+  BROADCAST=192.168.29.255
+  GATEWAY=192.168.29.1
+  ONBOOT=yes
+/etc/network/interfaces
+  iface eth0 inet dhcp
+#-in-interactive-
+ifconfig eth0 up 192.168.29.39 netmask 255.255.255.0
+route add default gw 192.168.1.1
+hostname comp1.ru
+/etc/hostname  of(fedora)
+route add -net 10.10.10.0 netmask 255.255.255.0 gw 172.24.22.1
+echo “1” > /proc/sys/net/ipv4/ip_forward
+/etc/sysctl.conf
+  net.ipv4.ip_forward = 1
+
+#--OPEN-VPN--
+/usr/share/openvpn/easy-rsa, /usr/share/doc/packages/openvpn,
+#copy the scripts to another location, such as /etc/openvpn
+#edit the /etc/openvpn/vars file and edit the 
+KEY_COUNTRY, KEY_PROVINCE, KEY_CITY, KEY_ORG, and KEY_EMAIL
+#to configure your CA(certificate authority):
+./vars
+./clean-all
+./build-ca
+#--
+./build-key-server server
+./build-key client1
+./build-key client2
+#Be sure to enter unique values for each system when prompted for a Common Name
+#finalize key generation
+./build-dh
+#----------
+ca.crt Server and all clients CA          certificate           No
+ca.key Key signing machine only           CA key                Yes
+dh1024.pem Server only                    Diffie Hellman parameters No
+server.crt Server only                    Server certificate    No
+server.key Server only                    Server key            Yes
+clientn.crt Client n only                 Client n certificate  No
+clientn.key Client n only                 Client n key          Yes
+#----------
+#client.conf and server.conf in  /etc/openvpn
+#exambles *.conf /usr/share/doc/packages/openvpn or /usr/share/doc/openvpn
+*You must also set the!!! dh parameter on the server
+*If client networks should be able to communicate with each other, uncomment the!!! client-to-client directive in the server.conf
+*Uncomment the!!! user nobody and!!! group nobody server.conf to improve security
+*On the clients, edit!!! remote parameter to point to the server. This line includes both a hostname and a port number (1194 by default). Change the port number only if you change it on the server using its port directive.
+#--Establishing the VPN connection--
+openvpn <config-file>
+#On the server configuration, add the following line to the server.conf to enable server-side systems to use the VPN:
+push "route 10.66.0.0 255.255.255.0"
+#If you want a client to function as a VPN router
+#On the server, you must create a directory called /etc/openvpn/ccd and set the following directives in the server’s configuration file:
+client-config-dir ccd
+route 192.168.4.0 255.255.255.0
+#In the /etc/openvpn/ccd directory, create a configuration fi le with the common name given to the OpenVPN client. This file should duplicate the route line in the main configuration file but using the keyword iroute:
+iroute 192.168.4.0 255.255.255.0
+#If you want to enable the OpenVPN server to direct traffic between VPN client networks, add the following lines to the server’s configuration file (again, changing the addresses as appropriate for your network):
+client-to-client
+push “route 192.168.4.0 255.255.255.0”
+
+
+#---207.1 Basic DNS Server Configuration---
+#/etc/named.conf
+options {
+  directory “/var/named”;
+  forwarders {
+   10.9.16.30;
+   10.13.16.30;
+  };
+  listen-on {
+   192.168.1.1;
+   172.24.21.1;
+  };
+  allow-transfer {“none”;};
+  forward first;
+};
+# 'forward first' -  as a forwarding server if possible but that it should perform full recursive lookups if that fails. If you change this line to 'forward only', BIND will only attempt to get an answer from the forwarders area. If you omit the forward only or forward first line and also omit the forwarders section, the server will perform full recursive lookups all the time.
+#---
+#--Modifying ZONE files /var/named
+#retrieve the current root zone file
+dig @a.root-servers.net . ns > db.cache
+#or download from  ftp://ftp.internic.net/domain/.
+killall -s SIGHUP named (the same as /etc/init.d/named reload)
+rndc reload #reloads the configuration files
+rndc stop   #terminates the server
+rndc flush  #flushes the server’s caches
+rndc status
+#--Adding NEW Zones-- /etc/named.conf
+##To have your system deliver IP addresses for local computers, you must create both forward and reverse zone files:
+zone “pangaea.edu” { #when it's fed hostnames
+  type master;
+  file "named.pangaea.edu";  #in /var/named/
+};
+zone “1.168.192.in-addr.arpa” { #when it's fed ip-addreses
+   type master;
+   file "named.192.168.1";
+};
+#--Config-ZONE-files-/var/named/*
+name IN record-type record-contents
+#--Configuring Forward Zone-files
+#record types: A,AAAA,CNAME,NS,MX,PTR,SOA,TXT
+$TTL 1D
+pangaea.edu. IN SOA dns1.pangaea.edu. admin.pangaea.edu. (
+2011022003 ; serial 
+3600 ; refresh
+600 ; retry
+604800 ; expire
+86400 ; default_ttl
+)
+dns1.pangaea.edu. IN A
+192.168.1.1 coelophysis.pangaea.edu. IN A 192.168.1.2 
+peteinosaurus IN A 192.168.1.3
+              IN A 192.168.1.4
+pangaea.edu. IN A 192.168.1.5
+dns1.wegener.pangaea.edu. IN A 172.24.25.2
+www IN CNAME webhosting.example.com.
+ftp IN CNAME plateosaurus
+@ IN MX 10 peteinosaurus
+@ IN MX 20 mail.example.com.
+@ IN NS dns1.pangaea.edu.
+wegener IN NS dns1.wegener.pangaea.edu.
+#----------
+#--Reverse-ZONE-file--
+$TTL 1D
+1.168.192.in-addr.arpa. IN SOA dns1.pangaea.edu. admin.pangaea.edu. (
+2010022003 ; serial
+3600 ; refresh
+600 ; retry
+604800 ; expire
+86400 ; default_ttl
+)
+1.1.168.192.in-addr.arpa. IN dns1.pangaea.edu.
+2 IN coelophysis.pangaea.edu.
+3 IN peteinosaurus.pangaea.edu.
+4 IN plateosaurus.pangaea.edu.
+5 IN pangaea.edu.
+@ IN NS dns1.pangaea.edu.
+#-----------
+#---Configuring a Slave Server
+#/etc/named.conf
+zone “pangaea.edu” {
+ type slave;
+ file "named.pangaea.edu";
+ masters { 192.168.1.1; }
+};
+#-----------
+#--Securing Zone Transfers
+#-to deny all zone transfers
+allow-transfer {“none”;};
+#-to allow particular
+allow-transfer {192.168.23.1; 172.24.21.1;);
+#--DNSSEC
+#/var/named/
+dnssec-keygen -a RSASHA1 -b 768 -n ZONE pangaea.edu.
+dnssec-signzone -o pangaea.edu named.pangaea.edu Kpangaea.edu.+005+nnnnn.private
+#--Running BIND in a Jail
+#/etc/passwd
+ named:x:200:200:Nameserver:/chroot/named:/bin/false
+mkdir -p /chroot/named
+cd /chroot/named
+mkdir -p dev etc/namedb/slave var/run
+cp -p /etc/named.conf /chroot/named/etc/
+cp -a /var/named/* /chroot/named/etc/namedb/
+cp /etc/localtime /chroot/named/etc/
+chown -R named:named /chroot/named/etc/namedb/slave
+chown named:named /chroot/named/var/run
+mknod /chroot/named/dev/null c 1 3
+mknod /chroot/named/dev/random c 1 8
+chmod 666 /chroot/named/dev/{null,random}
+#-then-change-SySV-or-other scripts-to-start
+
+
+#---210.1 DHCP configuration---
+route add -host 255.255.255.255 dev eth0
+#Sample dhcpd.conf file
+default-lease-time 86400;
+max-lease-time 172800;
+option subnet-mask 255.255.255.0;
+option routers 172.27.15.1;
+option domain-name-servers 172.27.15.2,10.72.81.2;
+option domain-name “example.com”;
+option netbios-name-servers 172.27.15.2;
+option netbios-node-type 8;
+get-lease-hostnames true;
+subnet 172.27.15.0 netmask 255.255.255.0 {
+ range 172.27.15.50 172.27.15.254;
+}
+#--leases--
+/var/lib/dhcp/dhcpd.leases
+grep dhcpd /var/log/messages | tail - n 1
+grep dhcpd /var/log/daemon.log | tail - n 1
+#--fixed address--
+host calvin.example.com {
+ hardware ethernet 00:80:C6:F9:3B:BA;
+ fixed-address 172.27.15.2;
+}
+#--dhcp relay--
+#/etc/default/dhcp3  or /etc/sysconfig/dhcrelay
+dhcrelay 172.27.15.2
+#--ROUTER-Advertisement daemon--
+radvd
+#/etc/radvd.conf---
+interface eth0
+{
+AdvSendAdvert on;
+MaxRtrAdrInterval 30;
+prefix 2002:db8:0:1::/64
+  {
+  AdvOnLink on;
+  AdvAutonomous on;
+  };
+};
+#--
+interface eth3 
+{ 
+AdvSendAdvert on; 
+AdvHomeAgentFlag off; 
+MinRtrAdvInterval 30; 
+MaxRtrAdvInterval 100; 
+prefix 2a00:11d8:1201:32b0::/64 
+ { AdvOnLink on; 
+   AdvAutonomous on; 
+   AdvRouterAddr on; 
+ }; 
+RDNSS 2001:4860:4860::8888 2001:4860:4860::8844 
+ { }; 
+}; 
+#-----------------
+
+#---210.3 LDAP client usage---
+/etc/openldap/ldap.conf
+ BASE        dc=pangaea,dc=edu
+ URI         ldaps://ldap.pangaea.edu
+ TLS_CACERT  /etc/openldap/ssl/certs/slapd-cert.crt
+#--LDIF-files-and ldap client manipulation
+#--------
+dn: uid=maryann,ou=People,dc=pangaea,dc=edu
+uid: maryann
+cn: maryann
+objectClass: account
+objectClass: posixAccount
+objectClass: top
+objectClass: shadowAccount
+userPassword: {SSHA}dUR1zOPZslHC6AGhGxAhcIYHpa7lqRGn
+shadowLastChange: 14262
+shadowMax: 99999
+shadowWarning: 7
+loginShell: /bin/bash
+gecos: Maryann
+uidNumber: 1010
+gidNumber: 100
+homeDirectory: /home/maryann
+#--------
+ldapadd -D cn=manager,dc=pangaea,dc=edu -W -f acct.ldif
+ldapmodify ...
+#to change maryann password by manager
+ldappasswd -D cn=manager,dc=pangaea,dc=edu -W -S uid=maryann,ou=People,dc=pangaea,dc=edu
+slappasswd # to generate hash password
+#to delete nemo user from the directory
+ldapdelete -D cn=manager,dc=pangaea,dc=edu -W cn=nemo,dc=pangaea,dc=edu
+#quering a server about accounts
+getent passwd maryann
+ldapsearch uid=maryann
+#The filter will find users with an account name of maryann who are not members of the Accounting department
+( & (uid=maryann)(!(ou=Accounting)))
+
+
+#---Centralized user account with openLDAP
+apt install libpam-ldap libnss-ldap
+#ip addr of ldap server, search base, services:group,passwd,shadow
+#check
+getent passwd
+vi /etc/pam.d/common-session
+  session required pam_mkhomedir.so umask=027 skel=/etc/skel
+#login (su - user)
+
+
+
+#---210.2 PAM authentication---
+/etc/pam.d/su
+ auth sufficient pam_exec.so quiet stdout seteuid /root/SU-allow.sh
+/root/SU-allow.sh 
+#!/bin/bash
+ LANG=POSIX
+ TODAY=$(date +%A)
+ echo "Today is $TODAY"
+ if [ -f "/tmp/$TODAY" ]; 
+ then
+ rm "/tmp/$TODAY" 
+ echo "*** Welcome ***" 
+ exit 0 
+ else 
+ exit 1 
+ fi 
+# chmod +x /root/SU-allow.sh
+ pam_unix.so     - Module for traditional password authentication
+ pam_cracklib.so - проверяет пароль
+ pam_limits.so   - Выставляет ограничения, /etc/security/limits.conf
+ pam_listfile.so - Пускает-непускает согласно списку
+ pam_sss.so      - Log errors and result of logging to syslog
+#---some PAM configuration options for sssd (sssd.conf)
+offline_credentials_expiration (integer) #if server offline, how long.. default 0
+offline_failed_login_attempts (integer) 
+offline_failed_login_delay (integer) #5
+pam_verbosity (integer)  #default 1 (show only important)
+pam_id_timeout (integer) #default 5
+pam_pwd_expiration_warning (integer) 
+pam_pwd_expiration_warning (integer) 
+#---limits.conf---
+*               soft    core            0
+*               hard    nofile          512
+@student        hard    nproc           20
+@faculty        soft    nproc           20
+@faculty        hard    nproc           50
+ftp             hard    nproc           0
+@student        -       maxlogins       4
+:123            hard    cpu             5000
+@500:           soft    cpu             10000
+600:700         hard    locks           10
+#--------------------------
+#--/etc/nsswitch.conf
+ passwd:     files ldap
+ shadow:     files ldap
+ group:      files ldap
+
+
+#---LDAP-server---
+/etc/hosts   or echo somehost.domain.com > /etc/hostname
+  127.0.1.1  somehost.domain.com somehost
+apt install slapd ldap-utils
+ #enter admin password
+/etc/ldap/ldap.conf
+ BASE        dc=domain,dc=com
+ URI         ldap://localhost:389
+ TLS_CACERT  /etc/openldap/ssl/certs/slapd-cert.crt
+sudo ldapsearch -Q -LLL -Y EXTERNAL -H ldapi:/// -b cn=config dn:
+ldapsearch -x -LLL -H ldap:/// -b dc=domain,dc=com  # x - anonymous
+#--create from ldif-file-
+dn: ou=people,dc=domain,dc=com
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,dc=domain,dc=com
+objectClass: organizationalUnit
+ou: groups
+#-----------------------
+ldapadd -W -D cn=admin,dc=domain,dc=com -f file.ldif
+#---IMPORT conf db--
+/usr/local/etc/openldap/slapd.ldif  #-slapd-config-
+    dn: olcDatabase=mdb,cn=config
+    objectClass: olcDatabaseConfig
+    objectClass: olcMdbConfig
+    olcDatabase: mdb
+    OlcDbMaxSize: 1073741824
+    olcSuffix: dc=example,dc=com
+    olcRootDN: cn=Manager,dc=example,dc=com
+    olcRootPW: secret
+    olcDbDirectory: /usr/local/var/openldap-data
+    olcDbIndex: objectClass eq
+#cn=config  commonly server 
+#olcIdleTimeout: secons
+#olcLogLevel: number (-1 any,0-disable,128-acl,8-conns,32-filter,32768-none(),etc..)
+#sldap -d
+slapadd -F /usr/local/etc/cn=config -l /usr/local/etc/openldap/slapd.ldif
+slapd -F /usr/local/etc/cn=config
+ldapsearch -x -b '' -s base '(objectclass=*)'
+#-----------------
+slapindex -q -f /etc/ldap/slapd.conf  #rebuild all of the indexes for the first database
+slapcat -l basics-out.ldif  # backup to file  (-a with filter)
+
+
+#---208.1 Implementing a Web server---
+#---208.2 Maintaining a Web server---
+#---208.3 Implementing a proxy server---
+apache2.conf or httpd2.conf . This file is usually located
+/etc/apache , /etc/apache2 , /etc/httpd , or /etc/httpd/conf
+  LoadModule directive  #to load module (or AddModule in old version)
+mods-available and mods-enabled subdirectories
+   access.conf  #how to treat specific directories
+   mime.types or apache-mime.types  #uses to identify file types   or magic
+#---Setting the Apache User and Group---
+ User apache
+ Group agroup
+#---Changing Web Page Locations---
+  DocumentRoot directive  #in apache2.conf
+  #in some Apache  DocumentRoot, in sites-available/default file (symbolic link in sites-enabled/default)
+  #be sure that it’s readable to the user under whose name Apache runs
+#---Enabling User Web Pages---
+  LoadModule userdir_module
+  UserDir public_html
+  #it may appear in the mods-available/userdir.conf (must be activated by symbolically linking in mods-enabled directory)
+http://www.example.com/~charlotte/apage.html 
+#---Two methods of delivering virtual domains:
+# 1.VirtualDocumentRoot---
+#www.example.com  %2.4 = exam, %2.-4 = mple
+ VirtualDocumentRoot /home/httpd/%-1/%-2    #(/home/httpd/com/example)
+ VirtualDocumentRoot /home/httpd/%-2.1/%-2  #(/home/httpd/e/example)
+ UseCanonicalNames Off
+# 2.VirtualHost---
+ NameVirtualHost *  #use all interfaces (or specific IP)
+ #---
+ <VirtualHost*>
+   ServerName www.example.com
+   DocumentRoot /home/httpd/business
+ </VirtualHost>
+ <VirtualHost*>
+   ServerName www.luna.edu
+   DocumentRoot /home/httpd/loonie/html
+   ScriptAlias /cgi-bin/ '/home/httpd/loonie/cgi-bin/'
+ </VirtualHost>
+#----
+#---CGI-----------------------
+ScriptAlias /cgi-bin /usr/www/cgi-bin  #to activate script support
+#php--
+LoadModule php5_module modules/libphp5.so
+AddHandler php5-script php
+#add index.php
+DirectoryIndex index.html index.php
+AddType text/html php
+#perl--
+apt install apache-mod_perl libapache2-mod-perl2
+#mods-available/perl.load or modules.d/75_mod_perl.conf
+#or LoadModule perl_module /usr/lib/apache2/modules/mod_perl.so
+<Directory /var/www/perl>   #to define scripts directory 
+  AllowOverride All
+  SetHandler perl-script
+  PerlResponseHandler ModPerl::Registry
+  PerlOptions +ParseHeaders
+  Options -Indexes FollowSymLinks MultiViews ExecCGI
+  Order allow,deny
+  Allow from all
+</Directory>
+#---------------------
+#---HTTPS-------
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365
+/etc/ssl/apache
+LoadModule ssl_module /usr/lib/apache2/modules/mod_ssl.so
+#besides..
+Listen      #This option binds the server to a particular port. The secure HTTP port is 443.
+SSLEngine   #You can set this option to on or off to enable or disable SSL.
+SSLRequireSSL    #Ordinarily, Apache will deliver files to both ordinary HTTP and secure HTTP clients. Using this option tells Apache to deliver files only to clients that have made secure connections. This directive takes no value
+SSLCACertificatePath   #This directive points to the directory in which the SSL certificate resides, such as /etc/ssl/apache
+SSLCertificateFile     #This directive identifies the SSL certificate file, such as /etc/ssl/apache/server.crt
+#---------------------
+#---Limiting Connections to Apache----
+<IfModule mpm_prefork_module>
+ StartServers 5
+ MinSpareServers 5
+ MaxSpareServers 10
+ MaxClients 150
+ MaxRequestsPerChild 0
+</IfModule>
+# options tell Apache to launch five servers initially ( StartServers ), to keep between 5 and 10 servers available to respond to requests at all times ( MinSpareServers and MaxSpareServers ), to launch at most 150 server instances ( MaxClients ), and to impose no limit on the number of requests the server handles ( MaxRequestsPerChild ; a value of 0 means no limit)
+#--------------------
+#---Setting User Authentication Options---
+LoadModule auth_module /usr/lib/apache2/modules/mod_auth.so
+htpasswd -c /etc/apache/passwd/passwords charlotte
+#in apache2.conf or in .htaccess (to protect (single directory))
+ AuthType Basic
+ AuthName "Restricted Files"
+ AuthBasicProvider file
+ AuthUserFile /etc/apache/passwd/passwords
+ Require user charlotte
+#--the same for many users (group)
+#/etc/apache/passwd/group
+ GroupName: charlotte wilbur fern
+htpasswd username #(without -c)
+#--apache2.conf-
+  AuthType Basic
+  AuthName “Restricted Files”
+  # (Following line optional)
+  AuthBasicProvider file
+  AuthUserFile /etc/apache/passwd/passwords
+  AuthGroupFile /etc/apache/passwd/groups
+  Require group GroupName
+#---------------------------
+#---APACHE contol---
+apache2ctl <command>
+start                  #Launches Apache.
+stop                   #Terminates Apache.
+graceful-stop          #Similar to stop, but requests that are currently being serviced are permitted to complete
+restart                #Restarts Apache. If it ’ s not running, restart is identical to start
+graceful               #Similar to restart
+fullstatus             #Displays a status report, including a list of requests being serviced. This option requires the mod_status module be enabled
+status                 #Similar to fullstatus but omits the list of requests being serviced
+configtest             #Performs a test of the configuration file syntax and reports any errors
+#--------------------------
+#---Log-Apache2---
+/var/log/apache2 , /var/log/httpd 'error.log' 'access.log' 'other_vhosts_access.log' 
+#---Squid---
+/etc/squid/squid.conf
+#ACLs
+#auth_param, acl, http_access
+#auth_param command tells Squid what mechanism to use for authenticating users
+#(PAM,Samba,windows dc,LDAP..)
+auth_param basic program /usr/lib/squid/pam_auth
+auth_param basic children 5
+auth_param basic realm Squid proxy-caching Web server
+auth_param basic credentialsttl 2 hours
+#--
+acl myacl proxy_auth REQUIRED
+#--
+http_access deny !myacl
+http_access allow localnet
+http_access deny all
+#----
+#Squid defaults port: 3128
+
+
+
+#---208.4 Implementing Nginx as a web server and a reverse proxy---
+
+
+
+
+#---211.1 Using e-mail servers---
+#Configuring a Domain to Accept Mail
+/var/named
+ @ IN MX 5 smtp.pangaea.edu.
+#---POSTFIX---
+/etc/postfix/main.cf
+ myhostname
+ mydomain 
+ myorigin
+ masquerade_domains 
+ masquerade_classes
+ masquerade_exceptions 
+ sender_canonical_maps 
+sender_canonical_maps = hash:/etc/postfix/sender_canonical
+   @pangea.edu @pangaea.edu
+   @localhost @pangaea.edu
+#-------- 
+#to convert to a binary format
+postmap sender_canonical #from the /etc/postfix directory
+#reload conf file
+postfix reload
+#--------
+#--Accepting Incoming Mail--
+mydestination = $myhostname, localhost.$myhostname, localhost, $mydomain
+#--Postfix Relay Configuration Options--
+  mynetworks_style 
+  mynetworks 
+  relay_domains
+relay_domains = $myhostname, localhost, localhost.localdomain
+mynetworks_style = host   #or default subnet
+relay_domains = $mydestination, example.org
+#--Configuring Postfix to Use a Relay--
+relayhost = mail.example.com
+#--Testing an SMTP server--
+telnet localhost 25
+  HELO localhost  #to identify the sending computer
+  MAIL FROM       #to identify the sending user
+  RCPT TO         #to identify the recipient
+  DATA            #to begin message text
+  QUIT            #to terminate the session
+#--Checking the Email Queue--
+mailq
+#--Checking LOG files--
+/var/log/mail.log and /var/log/mail.err
+/var/log/messages or /var/log/syslog
+#---211.2 Managing E-Mail Delivery---
+/var/spool/mail/username   //STORAGE MAIL (2 types 'mbox'(all message),'maildir'(each message))
+###SIEVE LANGUaGE---------------------------------------------
+
+[ .. ] для группировки элементов["user1@domain.ru", "user2@domain.ru", "user3@domain.ru"] 
+{ .. } для создания группы действий, если условие выполняется
+if     Сравнивает определённые параметры
+elsif 
+else   Если ни одно из условий не выполнилось, то выполняются операторы,  в { .. } после else
+stop   Останавливает обработку письма
+
+keep                 Сохраняет копию сообщения в каталоге по умолчанию.
+fileinto "каталог"   Перемещает письмо в указанный каталог
+discard              Удаляет письмо
+reject "<причина>"   Возвращает отправителю письмо, в котором указывается причина ошибки
+redirect "<почтовый ящик>" Перенаправляет сообщение на указанный почтовый ящик
+vacation <параметры> Автоматически отвечает на письмо
+
+size                 Сравнивает размер полученного письма с определённым размером (KB или MB)
+header               Сравнивает заголовок письма с определёнными параметрами.
+address              Сравнивает только поле адреса.
+allof(<параметры>)   Возвращает истину, если все условия выполняются.
+anyof(<параметры>)   Возвращает истину, если хотя бы одно условие выполняется.
+true                 Имеет всегда истиное значение.
+false                Имеет всегда ложное значение.
+not <параметр>
+#EXAMPLES------------------------------------------------------
+require ["fileinto", "vacation"];
+ # удаляем все письма, отмеченные сервером как спам
+ if header :is "X-Spam-Flag" "YES" {
+     discard; # поверим Spam Assassin
+     }
+ # Письма, относящиеся к Важному Проекту, положим в специальную папку
+ if anyof(
+     address :domain "from" "important.ru",
+     address "from" ["important.personal@gmail.com", "important.other@gmail.com"],
+     address ["to","cc"] "projects.important@mycompany.ru"
+ ) {fileinto "Customers.Important";}
+ # В ответ на письмо из своей компании с запросом отчёта, немедленно ответим :)
+ if allof (address :domain "from" "mycompany.ru", header :contains "subject" ["отчет", "отчёт"]) {
+     vacation :days 1 :addresses "reports@mycompany.ru" :subject "В ответ на ваш запрос" :mime
+ "MIME-Version: 1.0
+ Content-Type: text/html; charset=KOI8-R
+ Content-Transfer-Encoding: 7bit
+ <!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">
+ <HTML><HEAD><META http-equiv=Content-Type content=\"text/html; charset=windows-KOI8-R\"></HEAD>
+ <BODY>К сожалению, отчёт пока выслать не могу</BODY></HTML>";
+ }
+#---------------------------------------------------------------
+#dovecot.conf:
+ mail_location =  maildir:/var/mail/%n
+ plugin {
+ sieve_global_path = /var/lib/sieve/global.sieve
+ sieve_global_dir = /var/lib/sieve/global
+ sieve=~/.dovecot.sieve
+ sieve_dir=~/.sieve
+ }
+#main.cf #(в случае настоящих, не виртуальных юзеров):
+ mailbox_command = /usr/lib/dovecot/deliver
+
+
+
+#---211.3 Managing Remote E-Mail Delivery---
+/etc/dovecot/dovecot.conf
+#options:
+protocols                     #Specifies the protocols: imap , imaps , pop3 , and pop3s (ssl)
+listen                        #Specifies the IP address, and optionally the port
+login_process_per_connection  #each login launches its own process ( yes, the default)
+login_max_processes_count     #Sets the maximum number of Dovecot login processes (and hence the maximum number of logins, if login_process_per_connection is yes ) supported
+login_max_connections         #Sets the maximum number of connections per process if login_process_per_connection is set to no
+mail_location                 #Specifies the location of the mbox files or maildir directories
+%u (the local username)
+%n (the user part in the mail address)
+%d (the domain part in the mail address)
+%h (the home directory)
+A separate inbox may be specified by using a colon and INBOX after the user - manageable mail
+location
+#examples mail_location
+mail_location = maildir:~/Maildir
+mail_location = mbox:~/mail:INBOX=/var/mail/%u
+mail_location = mbox:/var/mail/%d/%1n/%n:INDEX=/var/indexes/%d/%1n/%n
+#----
+/etc/dovecot/conf.d/10-mail.conf      #Mailbox locations and namespaces 
+/etc/dovecot/conf.d/90-plugin.conf    #Plugin specific settings 
+doveadm #Dovecot's administration utility 
+doveadm reload   #Force dovecot(1) to reload the configuration.
+doveadm stop     #Stop dovecot(1) and all its child processes.
+doveadm director #Manage Dovecot directors (if used by proxy servers). 
+doveadm kick     #Disconnect users by user name and/or IP address. 
+doveadm log      #Locate, test or reopen Dovecot's log files. 
+doveadm penalty  #Show current penalties. 
+doveadm who      #Show who is logged in to the Dovecot server. 
+doveadm auth     #Test authentication for a user. 
+doveadm pw       #Dovecot's password hash generator. 
+doveadm user     #Perform a user lookup in Dovecot's userdbs 
+doveadm altmove  #Move matching mails to the alternative storage. 
+doveadm dump     #Dump the content of Dovecot's binary mailbox index/log. 
+doveadm expunge  #Expunge messages matching given search query. 
+doveadm fetch    #Fetch messages matching given search query. 
+doveadm force-resync  #Repair broken mailboxes, in case Dovecot doesn't automatically do that. 
+doveadm import   #Import messages matching given search query. 
+doveadm mailbox  #Various commands related to handling mailboxes. 
+doveadm purge    #Remove messages with refcount=0 from mdbox files. 
+doveadm quota    #Initialize/recalculate or show current quota usage. 
+doveadm search   #Show a list of mailbox GUIDs and message UIDs matching given search query. 
+
+
+#---FILE-SERVER-SAMBA---
+#/etc/samba/smb.conf
+#Basic Global Options:
+workgroup      #NetBIOS workgroup or NetBIOS domain name. 
+netbios name   #Computer ’ s NetBIOS name
+printing       #Name of the printing system, such as LPRng or CUPS
+printcap name  #Filename Name of the /etc/printcap file or a stand-in for it (such as cups )
+load printers  #Whether to make all your locally defined printers available when a [printers] share is present. The default value is Yes
+hosts allow
+hosts deny     #Host - based access controls, similar TCP Wrappers or xinetd
+security       #Specifies how Samba authenticates local users — by mimicking the method used by Windows 9 x /Me ( Share ) on a share-by-share basis
+encrypt passwords  #Boolean Specifies whether to require encrypted passwords.
+smb passwd file    #Encrypted password file.
+password server    #Hostname or IP
+username map       #File that holds mappings of Windows-style and Linux-style usernames
+name resolve order #Tells Samba how to resolve names: lmhosts uses a file called /etc/samba/lmhosts (similar to the /etc/hosts file);\
+#------------------------
+#--Setting Password Options--
+1. If necessary, set encrypt passwords to Yes
+2. As root, type 'smbpasswd -a username' at a command prompt, where username is a
+username for a user who should have access to the Samba server. The program will
+prompt for a new password, and then it will prompt you to type it again. The fi rst time
+you issue this command, it will complain that the passdb database doesn’t exist. You
+can ignore this complaint.
+3. Repeat step 2 for all the users who should have Samba access
+#--Setting Workgroup or Domain Options--
+nmblookup -MS -     #--lists of computers for browsing with GUI server-locating tools
+net join member -U adminuser
+#--An example username.map file
+!tgilliam = "T Gilliam" Terry
+!samlowry = slowry "Sam Lowry" Sam
+!jlayton = Jill
+!tuttle = @heating
+nobody = *
+#------------------------------
+#--Share options--
+[test]
+   comment = Test share on %L
+   path = /exports/shared
+   writeable = Yes
+comment #A one-line description of the share, which appears in some views of the share from the client
+path    #Directory name The directory to be shared
+browseable       #Whether the share appears in browsers. The default value is Yes
+writeable        #Whether users can write to the share, given the appropriate permissions. The default value is No
+create mask      #The Linux permissions assigned to new files created by clients
+directory mask   #The Linux permissions assigned to new directories created by clients
+nt acl support   #Whether to map Linux file ownership and permissions onto Windows NT - style ACLs. The default value is Yes
+force user       #An override to the username assigned to new files created by users
+available        #Whether the share is active; setting this option to No effectively disables the share 
+valid users      #Username list.Specifies users who are authorized to access the share
+#--Configuring Printer Shares--
+[printers]
+  comment = All Printers
+  browseable = no
+  path = /tmp
+  printable = yes
+  create mode = 0700
+#---Checking Your Configuration and Running Samba---
+testparm          #check smb.conf
+nmblookup nessus  #check host nessus
+smbstatus          #The smbstatus utility tells you about the current status of your Samba server, including the clients that are connected to it and the fi les that are currently open
+#--------------------------------------------------
+#---SMBCONTROL---(it sends signals to smbd,nmdb,winbindd)---------------------------------
+smbcontrol [destination] [message-type] [parameter]
+-s <configuration file> #Указывает имя конфигурационного файла используемого сервером
+-i #Запустить программу интерактивно
+destination
+#Все аргументы destination отправляют сообщения "broadcast" (широковещательно) ко всем запущенным службам
+message-type
+#Определяет тип сообщения для отправки. Более подробно смотрите раздел MESSAGE-TYPES.
+parameters
+
+#MESSAGE-TYPES
+#options:
+close-share
+#Дает команду демону smbd закрыть клиентское подключение к определенному общему файловому ресурсу.only smbd.
+debug
+#Устанавливает уровень отладки для определенного аргумента
+force-election
+#Это сообщение вынудит демон nmbd объявить выборы нового обозревателя сети
+ping
+#Отправит определенное количество сообщений "ping" и будет ждать определенное количестов ответов "pong"
+profile
+#bacic on parameter. может принимать значение "on" для включения сбора статистики профиля, "Off" для отключения сбора статистики профиля, "count" для сбора статистики только для счетчиков (временная статистика отключена), и "flush" для сброса статистики текущего профиля. only smbd или nmbd.
+debuglevel
+#Запрос уровня отладки для определенного демона и вывод результата на stdout
+profilelevel
+#Запрос profilelevel для определенного демона и вывод результата на stdout
+
+printnotify
+#отправить всем Windows NT клиентам сообщение printer notify message. Options:
+queuepause printername
+#Отправить на указаный принтер уведомление о паузе очереди печати
+queueresume printername
+#Отправить на указаный принтер уведомление о возобновлении очереди
+jobpause printername unixjobid
+#Отправить на принтер и unix jobid сообщение о приостановлении задания.
+jobresume printername unixjobid
+#Отправить на принтер и unix jobid сообщение о возобновлении задания.
+jobdelete printername unixjobid
+#Отправить на принтер и unix jobid сообщение об удалении задания.
+only smbd.
+#-----
+samsync
+#Вынудит smbd синхронизировать базу данных sam с PDC (или BDC). only smbd
+samrepl
+#Отправит сообщение о репликации sam с определенным номером. only smbd
+dmalloc-mark
+#Установит метку dmalloc. only smbd и nmbd
+dmalloc-log-changed
+#Выведет точки измененные с момента установки метки dmalloc-mark. only smbd и nmbd (если Samba собрана с поддержкой dmalloc)
+shutdown
+#Завершит работу демона. only smbd и nmbd.
+pool-usage
+#Выводит человекопонятные описания для всей talloc (pool) памяти. only smbd и nmbd
+drvupgrade
+#Вынуждает клиентов принтеров использовать определенный драйвер для обновления. only smbd
+reload-config
+#Вынудит демона перегрузить конфигурационный файл smb.conf
+nmbd #обеспечивает клиентам поддержку сервера имен NetBIOS
+nmbd [-D] [-F] [-S] [-a] [-i] [-o] [-h] [-V] [-d <debug level>] [-H <lmhosts file>] [-l <log directory>] [-p <port number>] [-s <configuration file>]
+-D, —daemon Become a daemon(default)
+-F, —foreground Run daemon in foreground (for daemontools & etc)
+-S, —log-stdout Log to stdout
+-i, —interactive Run interactive (not a daemon)
+-d, —debuglevel=DEBUGLEVEL Set debug level
+Уровни выше 1 генерируют значительный объем log’ов.Уровни выше 3 используются разработчиками.
+-H, —hosts=STRING Load a netbios hosts file
+-l, —log-basename=LOGFILEBASE Base name for log files
+ log.debug (содержащий отладочную информацию)
+ log.in (содержит входящие транзакции)
+ log.out (содержит выходящии транзакции)
+ log.smbclient, log.smbd
+-p, —port=INT Listen on the specified port <UDP port number>
+-s, —configfile=CONFIGFILE Use alternate configuration file
+#----------
+#---smbd  #предоставляет клиентам сервисы SMB--
+smbd [-D] [-F] [-S] [-i] [-h] [-V] [-b] [-d <уровень отладки>] [-l <файл протоколирования>] [-p <номер порта>] [-P <profiling level>] [-O <опции socket’ов>] [-s <конфигурационный файл>]
+-D, —daemon Become a daemon (default)
+-F, —foreground Run daemon in foreground (for daemontools, etc.)
+-S, —log-stdout Log to stdout
+-i, —interactive Run interactive (not a daemon)
+-h, —help, -?
+-V, —version
+-b, —build-options
+-d, —debuglevel=DEBUGLEVEL Set debug level
+-l, —log-basename=LOGFILEBASE Base name for log files
+ log.debug (содержащий отладочную информацию)
+ log.in (содержит входящие транзакции)
+ log.out (содержит выходящии транзакции)
+ log.smbclient, log.smbd
+-p, —port=STRING Listen on the specified ports
+-P, —profiling-level=PROFILE_LEVEL Set profiling level
+ 0 выкл. профилирование
+ 1 вкл. только счетчик профилирования
+ 2 запускает профилирование
+-O опции_socket’ов
+-s конфигурационный_файл 
+#---------------------------------------------
+#---winbindd-----
+winnbindd #демон NSS, которая используется Samba для преобразования имен от серверов NT
+winbindd [-D] [-F] [-S] [-i] [-Y] [-d <debug level>] [-s <smb config file>] [-n]
+# some example /etc/nsswitch.conf
+#информация о пользователях и группах берется из файлов /etc/passwd и /etc/group, а затем из базы сервера Windows NT:
+  passwd: files winbind
+  group: files winbind
+  hosts: files dns wins
+#-----------------------------------------------
+#---samba-tool Main Samba administration tool---
+samba-tool [-h] [-W myworkgroup] [-U user] [-d debuglevel] [--v]
+-s FILE|--configfile=FILE
+-d DEBUGLEVEL|--debuglevel=DEBUGLEVEL
+--option=OPTION #Set smb.conf option from command line 
+--realm=REALM #Set the realm name 
+--simple-bind-dn=DN #DN to use for a simple bind 
+--password=PASSWORD
+-U USERNAME|--username=USERNAME
+-W WORKGROUP|--workgroup=WORKGROUP
+-N|--no-pass  #Don't ask for a password 
+-k KERBEROS|--kerberos=KERBEROS #Use Kerberos 
+--ipaddress=IPADDRESS #IP address of the server 
+-V|--versionv  #Display version number
+###COMMANDS
+dbcheck
+#Check the local AD database for errors.
+delegation
+#Manage Delegations.
+delegation add-service accountname principal [options]
+#Add a service principal as msDS-AllowedToDelegateTo.
+delegation del-service accountname principal [options]
+#Delete a service principal as msDS-AllowedToDelegateTo.
+delegation for-any-protocol accountname [(on|off)] [options]
+#Set/unset UF_TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION (S4U2Proxy) for an account.
+delegation for-any-service accountname [(on|off)] [options]
+#Set/unset UF_TRUSTED_FOR_DELEGATION for an account.
+delegation show accountname [options]
+#Show the delegation setting of an account.
+dns
+#Manage Domain Name Service (DNS).
+dns add server zone name A|AAAA|PTR|CNAME|NS|MX|SRV|TXT data
+#Add a DNS record.
+dns delete server zone name A|AAAA|PTR|CNAME|NS|MX|SRV|TXT data
+#Delete a DNS record.
+dns query server zone name A|AAAA|PTR|CNAME|NS|MX|SRV|TXT|ALL [options] data
+#Query a name.
+dns roothints server [name] [options]
+#Query root hints.
+dns serverinfo server [options]
+#Query server information.
+dns update server zone name A|AAAA|PTR|CNAME|NS|MX|SRV|TXT olddata newdata
+#Update a DNS record.
+dns zonecreate server zone [options]
+#Create a zone.
+dns zonedelete server zone [options]
+#Delete a zone.
+dns zoneinfo server zone [options]
+#Query zone information.
+dns zonelist server [options]
+#List zones.
+domain
+#Manage Domain.
+domain classicupgrade [options] classic_smb_conf
+#Upgrade from Samba classic (NT4-like) database to Samba AD DC database.
+domain dcpromo dnsdomain [DC|RODC] [options]
+#Promote an existing domain member or NT4 PDC to an AD DC.
+domain demote
+#Demote ourselves from the role of domain controller.
+domain exportkeytab keytab [options]
+#Dumps Kerberos keys of the domain into a keytab.
+domain info ip_address [options]
+#Print basic info about a domain and the specified DC.
+domain join dnsdomain [DC|RODC|MEMBER|SUBDOMAIN] [options]
+#Join a domain as either member or backup domain controller.
+domain level show|raise options [options]
+#Show/raise domain and forest function levels.
+domain passwordsettings show|set options [options]
+#Show/set password settings.
+domain provision
+#Promote an existing domain member or NT4 PDC to an AD DC.
+drs
+#Manage Directory Replication Services (DRS).
+drs bind
+#Show DRS capabilities of a server.
+drs kcc
+#Trigger knowledge consistency center run.
+drs options
+#Query or change options for NTDS Settings object of a domain controller.
+drs replicate destination_DC source_DC NC [options]
+#Replicate a naming context between two DCs.
+drs showrepl
+#Show replication status.
+dsacl
+#Administer DS ACLs
+dsacl set
+#Modify access list on a directory object.
+fsmo
+#Manage Flexible Single Master Operations (FSMO).
+fsmo seize [options]
+#Seize the role.
+fsmo show
+#Show the roles.
+fsmo transfer [options]
+#Transfer the role.
+gpo
+#Manage Group Policy Objects (GPO).
+gpo create displayname [options]
+#Create an empty GPO.
+gpo del gpo [options]
+#Delete GPO.
+gpo dellink container_dn gpo [options]
+#Delete GPO link from a container.
+gpo fetch gpo [options]
+#Download a GPO.
+gpo getinheritance container_dn [options]
+#Get inheritance flag for a container.
+gpo getlink container_dn [options]
+#List GPO Links for a container.
+gpo list username [options]
+#List GPOs for an account.
+gpo listall
+#List all GPOs.
+gpo listcontainers gpo [options]
+#List all linked containers for a GPO.
+gpo setinheritance container_dn block|inherit [options]
+#Set inheritance flag on a container.
+gpo setlink container_dn gpo [options]
+#Add or Update a GPO link to a container.
+gpo show gpo [options]
+#Show information for a GPO.
+group
+#Manage groups.
+group add groupname [options]
+#Create a new AD group.
+group addmembers groupname members [options]
+#Add members to an AD group.
+group delete groupname [options]
+#Delete an AD group.
+group list
+#List all groups.
+group listmembers groupname [options]
+#List all members of the specified AD group.
+group removemembers groupname members [options]
+#Remove members from the specified AD group.
+ldapcmp URL1 URL2 domain|configuration|schema|dnsdomain|dnsforest [options]
+#Compare two LDAP databases.
+ntacl
+#Manage NT ACLs.
+ntacl get file [options]
+#Get ACLs on a file.
+ntacl set acl file [options]
+#Set ACLs on a file.
+ntacl sysvolcheck
+#Check sysvol ACLs match defaults (including correct ACLs on GPOs).
+ntacl sysvolreset
+#Reset sysvol ACLs to defaults (including correct ACLs on GPOs).
+rodc
+#Manage Read-Only Domain Controller (RODC).
+rodc preload SID|DN|accountname [options]
+#Preload one account for an RODC.
+sites
+#Manage sites.
+sites create site [options]
+#Create a new site.
+sites remove site [options]
+#Delete an esxisting site.
+spn
+#Manage Service Principal Names (SPN).
+spn add name user [options]
+#Create a new SPN.
+spn delete name [user] [options]
+#Delete an existing SPN.
+spn list user [options]
+#List SPNs of a given user.
+testparm
+#Check the syntax of the configuration file.
+time
+#Retrieve the time on a server.
+user
+#Manage users.
+user add username [password]
+#Create a new user. Please note that this subcommand is deprecated and available for compatibility reasons only. Please use samba-tool user create instead.
+user create username [password]
+#Create a new user in the Active Directory Domain.
+user delete username [options]
+#Delete an existing user account.
+user disable username
+#Disable an user account.
+user enable username
+#Enable an user account.
+user list
+#List all users.
+user password [options]
+#Change password for an user account (the one provided in authentication).
+user setexpiry username [options]
+#Set the expiration of an user account.
+user setpassword username [options] 
+#Sets or resets the password of an user account.
+vampire [options] domain
+#Join and synchronise a remote AD domain to the local server. Please note that samba-tool vampire is deprecated, please use samba-tool domain join instead.
+
+#---------------------------------------------
+#---Checking Samba Log Files---
+/var/log/samba
+log.nmbd and log.smbd
+#--------------------------------------
+#---Using Linux as an SMB/CIFS Client---
+smbclient [// SERVER / SHARE ] [ password ] [ options ]
+smb: \ > prompt, at which you can type commands such as:
+    help , ls , cd , rename , get , put , and exit
+#-options-
+-I ip-address #Connects to the specified IP address rather than to the computer with the NetBIOS name of SERVER .
+-L HOST       #Lists shares available on HOST .
+-s filename   #Uses filename as the configuration file rather than smb.conf
+-N            #Suppresses the normal prompt for a password. If the type of access you’re invoking would normally require a password, this option will cause the operation to fail.
+-A filename   #--authentication-file filename Obtains the username and password from the specified filename
+-U username [%password]  #--user=username [%password] Uses the specified username and, optionally, password when connecting to the server
+-n NAME                  #Passes NAME as the computer’s NetBIOS name when connecting.
+-W WORKGROUP             #--workgroup=WORKGROUP Passes WORKGROUP as the computer’s workgroup or domain name.
+-c commands             #Accepts commands as commands that smbclient should run (Multiple commands should be separated by semicolons.)
+#--------------------------------
+#---Mounting SMB/CIFS Shares------
+mount -t cifs //services/jill /mnt/services    # not smbfs (old) !!!!
+#/etc/fstab
+  //SERVICES/jill /mnt/jill-serv cifs credentials=/etc/samba/jill 0 0
+
+
+#---209.2 Configuring an NFS Server---
+rpc.idmapd 
+#This program, which works only with NFSv4 and later, maps usernames and UIDs between systems. This feature can be important if two computers both support the same users but use different UID numbers for those users.
+rpc.mountd 
+#This program, which runs on the server, helps manage mount requests from NFS clients. It communicates with clients and sends them information on the export and keeps track of which clients are connected to the server. This program is sometimes referred to as mountd
+rpc.nfsd 
+#This program is the user-space front-end to the kernel-space nfsd process, which does the bulk of the NFS server work.
+rpc.statd 
+#This program tells NFS clients when the NFS server is about to reboot, which helps clients manage this event.
+portmap 
+#This program (also known as the portmapper ) runs on the server and tells clients what port number they should contact to use the NFS server or certain other servers
+#----
+#/etc/exports
+  '/directory client(options) [client(options)[...]]'
+ several ways of client:
+   Hostnames
+   Wildcards  (*.domain.com)
+   IP Addresses
+   Network Addresses  192.168.1.0/25
+   NIS Netgroups
+ options:
+   secure or insecure
+   rw or ro
+   sync or async
+   hide or nohide
+   root_squash or no_root_squash
+   all_squash or no_all_squash
+   acl or no_acl
+   fsid=[num|root|uuid]
+#few examles
+/home helpman(rw) kurtzmann(rw,insecure) ida(rw)
+/opt helpmann.luna.edu(rw,no_root_squash) ida.luna.edu(ro,nohide)
+/exports *.info.luna.edu(ro,all_squash) 172.24.0.0/16(ro)
+#if you change something
+exportfs -r    #to update the server’s list of available exports
+exportfs
+-a #Reads /etc/exports and exports all the directories listed there (When used with -u, unexports all directories)
+-r #Reexports all directories. This has the effect of unexporting directories that are not listed in /etc/exports
+-o #options Implements the specified options, which take the same form as those in /etc/exports
+-u #Unexports one or more directories
+-f #Flushes and rebuilds the exports table
+-v #Adds verbose messages to the program’s output
+#-----------------
+showmount
+--all -a  #Displays both the IP addresses of clients and the directories they’re using
+--directories -d #Displays the directories currently being shared by the server but not the identities of clients
+--exports -e #Displays the current available exports (similar to the default output of exportfs , but each export uses just one line of output)
+--help -h    #Presents basic help information
+--version -v #Prints the program’s version number
+--no-headers #Suppresses explanatory headers in the output
+#-----------------
+nfsstat
+-s --server #Displays only server statistics.
+-c --client #Displays only client statistics.
+-n --nfs #Displays only NFS statistics.
+-r --rpc #Displays only RPC statistics.
+-2, -3, or -4 #Displays statistics on the specified NFS version.
+- m --mounts #Displays information on mounted NFS exports, including their names and current mount options (whether specified implicitly or explicitly)
+-o facility  #Displays information on the specified facility, which must be one of nfs, rpc, net, fh ,rc ,or all
+-Z --sleep #Takes a snapshot of the current statistics, pauses, and then displays the differences between the snapshot and the state of the system when it receives a SIGINT signal (as when the user presses Ctrl+C)
+#-----------------
+rpcinfo
+-p [host]       #Probes host (or the local computer) and displays all registered RPC programs
+-u host program #Using UDP, tells program on host to run procedure 0 and reports the results
+-t host program #Using TCP, tells program on host to run procedure 0 and reports the results
+-n portnum      #Uses portnum as the port number (used with the - u and - t options)
+-b program version #Broadcasts to the local network a request to run procedure 0 using the specified program and version and reports the result
+-d program version #Enables the superuser to delete the registration of the specified program and version on the local computer
+#------------------
+#Using Linux as an NFS Client
+mount -t nfs central.luna.edu:/home /mnt/morehome
+#/etc/fstab
+  central.luna.edu:/home /mnt/morehome nfs defaults 0 0
+
+
+#---FTP---
+#---Configuring Pure-FTPd----
+#The Pure-FTPd server is designed to be controlled mostly through command-line arguments rather than a configuration file, but:
+in Ubuntu you can edit /etc/default/pure-ftpd   /etc/pure-ftpd/conf
+in Fedora you can edit /etc/pure-ftpd/pure-ftpd.conf
+in Gentoo you can edit /etc/conf.d/pure-ftpd
+#-----------------
+pure-ftpd #options:
+-4 --ipv4only #Accepts only IPv4 connections.
+-6 --ipv6only #Accepts only IPv6 connections.
+-a gid --trustedgid gid #Causes users in the specified group to not be chrooted to their home directories; others (except for root ) are chrooted. Without this option, only anonymous access is chrooted
+-A --chrooteveryone    #Causes all accesses except for root to be chrooted to their home directories
+-B --daemonize         #Starts the server in the background
+-c num --maxclientsnumber num #Accepts at most num simultaneous client connections. The default value is 50
+-C num --maxclientsperip num #Accepts at most num simultaneous connections per client IP address. This option works only in stand-alone mode (super servers provide similar functionality).
+-e --anonymousonly           #Supports only anonymous access
+-E --noanonymous Supports only non - anonymous (normal user)
+access.
+-i --anonymous cantupload    #Disables upload support for anonymous users.
+-M --anonymous cancreatedirs #Allows anonymous users to create directories.
+-N --natmode                 #Uses active mode by default; useful behind some NAT routers
+-u uid --minuid uid          #Disallows access to users with UID numbers below uid
+#----------------------------
+#---Configuring vsftpd-------
+/etc/vsftpd.conf or /etc/vsftpd/vsftpd.conf
+option = value
+#options:
+listen YES or NO       #If YES , vsftpd binds itself to the FTP port to listen for IPv4 connections. Set this value to YES if vsftpd is run from a SysV or local startup script; leave it at its default value (NO) if it’s run from a super server
+listen_ipv6 YES or NO  #This option works much like listen, but it applies to IPv6 connections rather than IPv4 connections
+ftpd_banner String     #Sets a welcome message that appears in the user’s FTP client program when connecting
+nopriv_user Username   #The username vsftpd uses for unprivileged operations
+ftp_username Username  #The username vsftpd uses for anonymous access. The default is ftp
+local_enable YES or NO #Whether to accept authenticated local user logins.
+anonymous_enable YES or NO #Whether to accept anonymous logins.
+anon_root Directory    #Sets the directory to be used as the root directory for anonymous access. This directory must normally not be writeable to the anonymous user, unless anon_upload_enable is YES . The default is the anonymous user’s home directory, as specified in /etc/passwd
+chroot_local_user YES or NO #Tells vsftpd whether to use chroot when accepting local user login
+userlist_enable YES or NO    #If YES, vsftpd checks the file specified by userlist_file and denies logins to these users before asking for a password.
+write_enable YES or NO       #Grants or denies the ability to write files—that is, for users to upload files as well as download them
+anon_upload_enable YES or NO #Grants or denies anonymous users the ability to upload files. If YES, write_enable must also be YES
+
+
+##---SECURITY TASKS---
+#---Fail2ban---
+/etc/fail2ban
+cp -p fail2ban.conf fail2ban.local
+cp -p jail.conf jail.local
+#jail.local
+    [DEFAULT]
+    ignoreip = 127.0.0.1/8
+    #bantime  = -1
+    bantime  = 600
+    maxretry = 3
+    backend = auto
+    destemail = admin@example.org
+    # ACTIONS
+    banaction = iptables-multiport
+    #mta = sendmail
+    mta = mail
+    protocol = tcp
+    chain = INPUT
+    action = %(action_mwl)s
+    # JAILS
+    [ssh]
+    enabled  = true
+    #mta = mail[name=ssh Atacced!!!]
+    port     = ssh
+    filter   = sshd
+    logpath  = /var/log/auth.log
+    maxretry = 6
+    [pure-ftpd]     
+    enabled  = true
+    #mta = mail[name=pure-ftpd Atacced!!!]
+    port     = ftp,ftp-data,ftps,ftps-data
+    filter   = pure-ftpd
+    #logpath  = /var/log/auth.log
+    logpath  = /var/log/syslog
+    maxretry = 6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

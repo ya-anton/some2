@@ -1,0 +1,654 @@
+===105.1 CONF BASH ENV===
+/etc/skel/  Файлы создаваемые при добавлении пользователя
+/etc/profile
+ |
+ /etc/bash.bashrc
+ /etc/bashrc
+ |
+ /etc/profile.d/
+  ~/.bash_profile
+  ~/.bash_login
+  ~/.profile
+    ~/.bashrc
+      alias name1='date'
+      function f1(){
+      echo $1; echo $2 
+      }
+set         переменные оболочки
+env         переменные среды
+export name превращает переменную оболочки в переменную среды
+unset  name удаление переменной
+PATH
+list=(apple mango banana)
+echo ${list[1]}   #mango
+===
+for i in D*; do echo $i; done
+"IFS" (Internal Field Separator), на "$'\x0a'"  переменная указывающая на разделитель  (перевод строки)
+===
+$DIRSTACK - содержимое вершины стека каталогов
+$EDITOR - текстовый редактор по умолчанию
+$EUID - Эффективный UID. Если вы использовали программу su для выполнения команд от другого пользователя, то эта переменная содержит UID этого пользователя, в то время как...
+$UID - ...содержит реальный идентификатор, который устанавливается только при логине.
+$FUNCNAME - имя текущей функции в скрипте.
+$GROUPS - массив групп к которым принадлежит текущий пользователь
+$HOME - домашний каталог пользователя
+$HOSTNAME - ваш hostname
+$HOSTTYPE - архитектура машины.
+$LC_CTYPE - внутренняя переменная, котороя определяет кодировку символов
+$OLDPWD - прежний рабочий каталог
+$OSTYPE - тип ОС
+$PATH - путь поиска программ
+$PPID - идентификатор родительского процесса
+$SECONDS - время работы скрипта(в сек.)
+$# - общее количество параметров переданных скрипту
+$* - все аргументы переданыне скрипту(выводятся в строку)
+$@ - тоже самое, что и предыдущий, но параметры выводятся в столбик
+$! - PID последнего запущенного в фоне процесса
+$$ - PID самого скрипта 
+
+
+===105.2 SCRIPTS===
+read value   ожидание ввода
+if [ $value = y ];
+then
+echo yes
+else 
+echo no 
+fi
+====
+test [ ]
+$?
+==EXPRESSION
+( EXP )  is true?
+! EXP    is false?
+EXP1 -a EXP2    and
+EXP1 -o EXP2    or
+==STRING
+-n STR      nonzero
+-z STR      zero
+STR1 = STR2
+STR1 != STR2
+==INTEGER
+INT1 -eq INT2  (-gt,-ge,-le,-lt,-ne,)
+test 5 -gt 2 ### [ 5 -gt 2 ]
+==FILE
+FILE1 -ef FILE2      the same device and inode
+FILE1 -nt FILE2      newer
+FILE1 -ot FILE2      older
+test -e file ### [ -e file ]
+-x исполняемый файл;
+-e файл существует
+-d DIRECTORY
+-u SUID?
+-g GUID?
+-k STICKY?
+-S SOCKET?
+-b block file
+-r read?
+-L, -h SYMLINK?
+====
+echo $(date)  подстановка команды
+echo `date`
+===
+for i in 1 2 3 ; do echo $i ; done
+for i in $(seq 3); do echo $i; done
+for i in $(seq 3 5); do echo $i; done
+for i in $(seq 2 2 6); do echo $i; done
+for i in $(ls /$HOME/Video); do echo $i; done
+for ((i=1; i<=3 ; i++)); do echo $i; done
+for i in {1..3}; do echo $i; done
+===
+x=10
+while [ $x –ne 20 ]
+do
+echo “number $x”
+x=$(($x+1))
+done
+========
+case $SOMETHING in
+1)
+command1
+;;
+2)
+command2
+;;
+*)
+exit 0
+;;
+esac
+=========
+exec >filename    redirect from stdout to file
+exec <filename    redirect from stdin to file
+
+
+===105.3 SQL===
+CREATE USER 'newuser'@'localhost' IDENTIFIED BY 'password';
+GRANT ALL PRIVILEGES ON * . * TO 'newuser'@'localhost';
+FLUSH PRIVILEGES;
+CREATE DATABASE cars;        (создать БД cars);
+USE cars;                    (начать работу с БД cars);
+CREATE TABLE new (brand VARCHAR(10), model VARCHAR(10), year YEAR, price INT);
+CREATE TABLE used (brand VARCHAR(10), model VARCHAR(10), year YEAR, price INT);
+SHOW TABLES;                 (вывести перечень созданных таблиц);
+DESCRIBE new;                (вывести структуру таблицы new);
+mysql --local-infile=1 -u username 
+USE cars;                    (начать работу с БД cars);
+LOAD DATA LOCAL INFILE "new.txt" INTO TABLE new;  (загрузить new.txt);
+===
+INSERT INTO new (brand, model, year) VALUES (‘Daewoo’, ‘Nexia’, ‘2015’);
+DELETE FROM new WHERE model= ‘Matiz’;
+UPDATE new SET model = ‘KUGA’ WHERE model = ‘FOCUS’;
+SELECT * FROM new;
+SELECT model FROM new;
+SELECT * FROM new WHERE brand = “KIA”;
+SELECT * FROM new WHERE brand = “KIA” AND year =  “2015”;
+SELECT * FROM new JOIN used ON new.brand = used.brand ;
+SELECT * FROM new ORDER BY price;
+SELECT * FROM new GROUP BY brand;
+
+
+===106.1 X11===
+apt install xorg
+X –configure   первичная конфигурация
+startx
+~/xorg.conf.new
+/etc/X11/xorg.conf              usually
+/usr/share/X11/xorg.conf.d/     ubuntu
+    xwininfo – дает информацию по выбранному окну;
+    xdpyinfo – вся информация по самому X серверу.
+echo $DISPLAY    :0 (:-local,0-number)
+DISPLAY=:0.0 ; export DISPLAY    переключить tty в клиенский (0.0 -serv)
+ctrl-alt-t   создать xterm (gnome)
+xhost +10.0.0.10       
+DISPLAY=10.0.0.11:0    для покл. на удаленной стороне
+
+
+===106.2 Display MANAGER===
+/etc/X11/default-display-manager
+apt install xdm kdm gdm lightdm
+dpkg-reconfigure xdm
+update-rc.d -f xdm remove    выключение xdm
+    /etc/init/kdm.conf 
+    · start on runlevel [!026] (запускать на всех уровнях кроме 0,2 и 6)
+    · stop on runlevel [026]   (останавливать на уровнях 0, 2 и 6)
+
+.....
+
+
+===106.3 func===
+.....
+
+
+
+===107.1 USERS, GROUPS===
+/etc/passwd  user:pasword:uid:guid:info:home.dir:bash
+/etc/group   group.name:passwd:gid:members
+/etc/shadow
+user:hash.pass:last.ch.pass:min.time:max.time:period.warn:::
+/etc/gshadow
+uid>1000
+===
+useradd user -m -s /bin/bash 
+  -D /home/name
+  -g group.name 
+  -G groups,..  -aG добавить 
+  -m сразу создать /home/$USER
+  -p (--password p@0ss)
+  -s (--shell)
+  -u UID  ...
+usermod
+  -L block user
+  -U unlock user
+  -s (--shell)
+  -a append to Group
+  -aG groups
+  -G 
+  -e expire date
+userdel
+  -r del DIR
+passwd user
+===
+groupadd
+groupmod
+  -p password
+  -n new-name
+groupdel
+chage –E 2016-01-01 (указать срок истечения действия пароля) (-1 never)
+chage -l user
+getent passwd (shadow)    умеет работать в домене и по сети LDAP ...
+getent passwd user
+
+
+===107.2 CRONs===
+===system
+/etc/crontab         необходимо указать user
+/etc/cron.daily
+/etc/cron.hourly
+/etc/cron.monthly
+/etc/cron.weekly
+/etc/cron.d
+===users
+/var/spool/cron/crontabs
+crontab -e
+        -l
+/etc/cron.allow   можно создать списки (просто user.name)
+/etc/cron.deny    приоритет по разрешению выше
+                  необходимо иметь один файл (пустой allow - запретит всем)
+===
+/etc/anacrontab
+период_дней           задержка_минут   id   command
+/var/spool/cron../    последнее выполнение задачи
+/etc/crod.daily/0anacron    (выполняется в первую очередь (0))
+Установка anacron отключает выполнение cron сценариев
+(/etc/cron.(hourly,daily,weekly,monthly))  UBUNTU!
+===
+atq    – показывает что запланировано;
+atrm number –  удаляет запланированное;
+at now +15 minute (15:00 01/09/2015) command
+at -f my_at_test.sh 20:00
+at midnight Friday
+/etc/at.allow
+/etc/at.deny
+
+
+===107.3 LANG TIME===
+LANG=C установка по умолчанию
+LC_ALL  все
+locale (-a show all avail locales, -m show charmaps)
+LC_ALL=ru_RU.utf8
+export LC_ALL
+===
+iconv –-list (список доступных кодировок)
+iconv –f UTF-8 –t ASCII /etc/fstab (изменить с UTF-8 на ASCII и вывести)
+    ASCII (128 символов, в основном текст);
+    ISO-8859 (кодовые страницы для разных языков, совместимые между собой);
+    Windows-1251 (стандартная 8-битная к. русскоязычных Windows);
+    UTF-8 (Unicode, видит почти все языки и символы).
+===
+tzselect       (устанавливает TZ=..)  TZ=...;export TZ
+/etc/timezone   значение часового пояса
+/etc/localtime  -->  /usr/share/zoneinfo/Moscow --> ../W-SU (zdump file)
+date [MMDDhhmm[[CC]YY][.ss]]
+ timedatectl set-time "2012-10-30 18:17:16"
+ timedatectl list-timezones
+ timedatectl set-timezone America/Los_Angeles
+ubuntu: dpkg-reconfigure tzdata
+
+
+===108.1 TIME NTP===
+1 значение
+2 стандарт (местное или глобальное UTC)
+3 пояс
+4 переход на летнее
+hwclock   апаратное время
+/etc/adjtime
+hwclock --adjust
+hwclock --sed --date="01/01/2020 12:00"
+hwclock -w                 синхр. с системными часа
+hwclock --localtime -w     хранить аппаратное время в localtime
+hwclock -u -w              хранить аппаратное время в UTC 
+===
+NTP udp 123
+http://www.pool.ntp.org
+ntpdate  0.ru.pool.ntp.org
+ntpd  # apt install ntp
+/etc/ntp.conf
+  server 0.ru.pool.ntp.org
+ntpq -np
+
+
+===108.2 SYSLOG===
+===syslogd== (uses udp)
+/etc/syslog.conf
+ВАЖНОСТЬ
+-debug,
+-info,
+-notice,
+-warning, warn,
+-err, error,
+-crit,
+-alert,
+-emerg, panic
+-none - никто от нее не пишет
+#источник приоритет назначение
+*.info;cron.*     /var/log/messages
+user.*            @192.168.1.1
+  #принимать /etc/sysconfig/syslog
+   SYSLOGD_OPTIONS -r   #enable remote log
+logger -p user.warn HELP!!!
+#для регистрации событий ядра     klogd --> syslogd
+klogd -o -f kernel.log            #устаревшее
+====
+logrotate
+/etc/cron.daily/logrotate
+   /usr/sbin/logrotate
+   /etc/logrotate.conf
+     weekly      еженедельно
+     rotate 4    хранить 4 недели (кол-во)
+     size 100k   (maxsize, minsize)
+     compress
+     delaycompress  архивировать предыдущий лог
+     ...
+utmpdump bin.file
+/etc/logrotate.d    #отдельные настройки
+====
+journald
+ /run/log/journal/..    по умолчанию в ОЗУ
+ /var/log/journal       хранит если создать папку
+/etc/systemd/journald.conf
+    storage   (место хранения логов)   (persistent создаст journal)
+    compress  (сжатие)
+    seal      (шифрование)
+    splitmode (опции разбиения лога)
+    system    (установка ограничений на размер, и количество журналов)
+    forward   (опции пересылки логов)
+journalctl –b                 (события с последней загрузки);
+journalctl --since 13:00 --until 13:05
+journalctl --since yesterday --until now
+journalctl -u networking.service
+journalctl -p err             (показать все ошибки);
+journalctl -n 20              (последние 20 событий);
+journalctl –f                 (события в режиме реального времени);
+journalctl --disk-usage       (показать место, занятое журналами);
+journalctl --vacuum-size=1G   (установить макс. размер всех логов в 1 Гб).
+                   -time=1years
+===
+systemd-journal-remote
+systemd-journal-remote --url https://host:port    #принять логи
+systemd-journal-upload
+=====
+rsyslog            (uses tcp)
+/etc/rsyslog.cong
+/etc/rsyslog.d/
+  :msg,contains,"something" /var/log/file.log
+/etc/logrotate.d/rsyslog
+====
+syslog-ng
+/etc/syslog-ng/syslog-ng.conf
+    sources        (откуда принимать события);
+    destination    (куда отправлять события);
+    filters        (какие события куда направлять);
+    log paths
+/etc/syslog-ng/syslog-ng.conf.d/
+
+
+===108.3 MTA===
+Sendmail – один из старейших MTA
+Qmail    – альтернатива sendmail
+Exim
+Postfix  – модульный MTA
+==
+apt install postfix mailutils
+echo “kirill: semaev” > /etc/aliaces
+newaliases
+==
+mail kirill              Отправить письмо адресату kirill:
+cc (copy)
+subject: Hello
+This is a test letter
+CTRL-D
+mail                     Проверить почту
+d                        удалить
+q
+touch ~/.forward         настройка переадресации k root
+echo “root” > ~/.forward
+man sendmail
+mailq                    просмотр очереди сообщений
+
+
+===108.4 CUPS===
+CUPS - сервер печати в *nix системах
+631 port
+  очередь печати на стороне клиента
+LDP/LPR, jet Direct, AppSocket,
+  очередь печати на стороне сервера
+Internet Printing Protocols (ipp14,ipps,ipp,https,http)
+==
+Добавление по URI usb://Samsung/ML-2850
+Добавление через http://localhost:631 принтера по URI socket://192.168.1.100:9100
+sudo apt-get install cups-pdf   Установка принтера PDF
+/etc/cups/
+/etc/cups/cupsd.conf
+/etc/cups/printers.conf
+usermod -aG lpadmin username    добавить права оператора печати
+/var/spool/cups/                очередь заданий печати
+lpq                             показать задания печати
+lpq –a                          (задания на всех принтерах)
+lpq –PSamsung                   (задания на принтере Samsung)
+lpq                             (очередь на принтере по умолчанию)
+lpc status all                  (посмотреть состояние всех принтеров)
+lpr –PPDF pushkin.txt           (послать pushkin.txt на принтер PDF)
+                                (~/PDF/pushkin.pdf)
+lprm                            удалить задание печати.
+lprm 12                         удалить задание № 12 из очереди
+lprm –PHP -                     удалить все задания для HP
+lpmove                 перенос заданий печати
+lpmove 14 Samsun       перенос задания №14 на принтер Samsun
+lpmove Samsung HP      перенос всех заданий с Samsung на HP
+cupsaccept         включить очередь;
+cupsreject         выключить очередь
+cupsenable             включить печать;
+cupsdisable            выключить печать
+ cupsreject PDF
+ cupsdisable –r “Out of paper...” PDF
+
+
+===109.1 TCP/IP===
+/etc/services
+IPv4, IPv6, подсети, TCP, UDP, ICMP
+0-1023            общеизвестные порты
+1024-49151        зарегистрированные порты
+49152-65535       динамические порты
+===
+    10.0.0.0/8
+    172.16.0.0/12
+    192.168.0.0/16
+==ipv6==
+global      публичные адреса 2000::/3
+link-local  автонастроенным  FE80::/10
+loopback                     ::1/128
+unique-local                 FС00 , FD00
+unspecified                  ::/128
+
+
+===109.2 conf NET===
+RedHat
+/etc/sysconfig/network-scripts/..
+ Bootpro=static
+ Ipaddr=192.168.0.5
+ Netmask=255.255.255.0
+ Gateway=192.168.0.10
+ DNS1=192.168.0.1
+ nm_controlled=no     Иногда требуется отключать сетевой менеджер
+ onboot=yes           Для автоматического включения сетевого интерфейса
+Ubuntu
+ auto enp0s3          Для автоматического включения
+ iface enp0s3 inet static
+ address 192.168.0.5
+ netmask 255.255.255.0
+ gateway 192.168.0.10
+ dns-nameservers 192.168.0.1
+/etc/NetworkManager/NetworkManager.conf
+ #dns=dnsmasq
+ #managed=true
+ifup
+ifdown
+ifconfig enp0s3 192.168.0.55
+ifconfig enp0s3  netmask 255.255.0.0
+ifconfig eth0 hw ether 00:A2:E3:CD:12:15
+route        (показать маршруты)
+route del default
+route add default gw 192.168.0.10
+ip a
+ip l set down enp0s3
+ip l set up enp0s3
+ip -4 a flush enp0s3                       удалить настройки
+ip a add 192.168.1.200/24 dev enp0s3
+ip r add 0.0.0.0/0 via 192.168.208.254 dev eth0
+/etc/hostname      имя узла
+/etc/hosts         local DNS bd
+/etc/resolv.conf
+/etc/resolvconf/resolv.conf.d/ (head,base,tail)
+resolvconf -u               update resolv.conf
+/etc/nsswitch.conf          conf DNS daemon
+  настраивается порядок обращений
+ZEROCONF - Apipa(LLMNR),Avahi(mDNS)
+
+
+===109.3 troubleshooting===
+route,host,dig,netstat,nc,traceroute,tracepath..
+ifconfig enp0s3 down
+rmmod e1000
+ifconfig enp0s4 192.168.0.4/24
+route add default gw 192.168.0.10 netmask 0.0.0.0 dev enp0s3 metric 99 
+/etc/network/interfaces
+   metric 100
+
+
+===109.4 DNS===
+    ::1             – петлевой адрес;
+    fe00::0         – класс E для будущего использования;
+    ff00::0          – мультикаст область сети хоста;
+    ff02::1          – широковещательный адрес сети – все узлы;
+    ff02::2          – широковещательный адрес сети для маршрутизаторов.
+127.0.1.1 и 127.0.0.1 
+/etc/hosts
+host ya.ru            узнать ip-адреса связанные с именем ya.ru
+host 8.8.8.8          узнать DNS имя связанное с адресом 8.8.8.8
+dig ya.ru             узнать ip-адреса связанные с именем ya.ru
+dig @8.8.8.8 ya.ru    узнать ip-адреса ya.ru у DNS-сервера 8.8.8.8
+getent hosts             (посмотреть локальную БД хостов);
+getent hosts mti.edu.ru  (посмотреть информацию о DNS имени);
+
+
+===110.1 Administration===
+find / -perm /u+s              +4000
+find / -user root -perm /u+s   
+find / -perm /g+s              +2000
+find / -perm /u+s,g+s
+             -   и
+             /   или
+find / -name "*.old" -delete
+find ./ -type f -exec chmod 644 {} \;
+===
+sudo usermod –L petr      (заблокировать учетную запись petr)
+sudo usermod –U petr      (разблокировать учетную запись petr)
+sudo chage –l petr              (вывести параметры учетной записи petr)
+sudo chage petr ...             (задать параметры учетной записи petr)
+/etc/login.defs         Глобальные политики безопасности
+mkhomedir_helper user   созд. home dir
+===
+ограничение ресурсов на процессы
+для конкретного пользователя:
+ulimit –a       (показать существующие ограничения);
+ulimit –f 0     (установить ограничение на размер файла в 0 блоков);
+глобальные
+/etc/security/limits.conf
+  кто, вид ограничения, параметр, значение
+  *       hard           maxlogins  1 
+===
+su -
+su –c 'vi /etc/resolv.conf'
+sudo vi /etc/resolv.conf        пароль текущего пользователя
+ /etc/sudoers
+ visudo
+ user ALL=(ALL) ALL
+ «на любой машине=(от имени любого:от любой группы) команда»
+          макс. привилегии для группы %admin,sudo (в Debian)
+                             и группы %wheel (в RedHat)
+sudo -K   сбросить сеанс (введенный пароль)
+su -s     сразу перейти в /root/
+su        остаться в ~
+===
+netstat -tuna (tcp,udp,numeric,all)
+nmap
+lsof -l            #net_conn
+lsof –c mysql      #какие порты использует mysql           (ищет файлы)
+fuser 53/tcp       #показать демоны, использующие порт 53  (ищет процессы)
+===
+w
+who
+last    /var/log/wtmp
+users   /var/log/utmp
+lastb   /var/log/btmp
+who -b   время последней загрузки
+who -qH  все активные сеансы пользователей
+
+
+===110.2 Security===
+/etc/nologin    наличие файла не дает никому кроме root войти в систему
+суперсервер inetd (freeBSD)
+/etc/inetd.conf
+/etc/inetd.d/
+суперсервер xinetd (Linux)
+/etc/xinetd.conf
+/etc/xinetd.d/
+===
+TCP Wrappers (обработчик TCP)  localhost тоже использует
+/etc/hosts.allow
+/etc/hosts.deny
+ALL: mti.edu.ru EXCEPT @buhs
+  (разрешить доступ из домена mti.edu.ru, кроме группы  buhs);
+tftpd: 192.168.0 
+  (разрешить доступ к tftpd из сети 192.168.0)
+
+
+===110.3 SSH GPG===
+     client                                      server
+~/.ssh/known_hosts
+  pub_key_serv
+для всех пользователей
+/etc/ssh/ssh_known_hosts
+===
+   Вход по ключу
+RSA - для подписи и шифрования
+DSA - только для подписи
+ssh-keygen -t rsa
+  ~/.ssh/id_rsa.pub
+  ~/.ssh/id_rsa
+ssh-copy-id -i .ssh/id_rsa.pub 10.0.0.1
+                                          ~/.ssh/authorized_keys
+                                                     id_rsa
+Для запоминания passphrase в консоли
+ssh-agent bash
+ss-add .ssh/id_rsa
+===
+sudo ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key      для всей системы
+===
+ssh –X 10.0.0.1
+firefox             
+запустить на локальной машине окно firefox с удаленного сервера
+scp, ssh -L
+====
+gpg --gen-key        (сгенерировать пару ключей)
+gpg --list-key       (показать доступные ключи)
+gpg --export semaevkey > gpg.public     
+(экспортировать открытый ключ в двоичный формат)
+===на другой машине: используем полученный gpg.public
+gpg --import gpg.public                     (импортировать полученный ключ)
+gpg --list-key                              (проверить доступные ключи)
+gpg --out secret.file --recipient ‘Kirill Semaev’ --encrypt file.txt 
+                                  реквизиты ключа
+===                      
+используем полученный secret.file
+gpg --out some.file --decrypt secret.file   (расшифровать файл
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+

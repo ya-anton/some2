@@ -1,0 +1,477 @@
+# lists of repositories
+/etc/apt/sources.list
+apt-get clean && apt-get update && apt-get upgrade -y && apt-get dist-upgrade -y
+
+dpkg -L packet.name # list files of a packet
+
+/etc/NetworkManager/NetworkManager.conf   ->  true  # gui net-manager
+
+
+
+# AUTORUN ON BOOT-----
+#---add command--to /etc/rc.local
+
+
+
+
+
+wget -P /home/777/ -c http://cdimage.kali.org/kali-2.0/kali-linux-2.0-i386.iso -t 0 --limit-rate=15000 --read-timeout=10 --tries=1000
+
+
+
+
+
+#---MOUNTing
+mkdir /mnt/POINT && mount -t ntfs /dev/sdc1 /mnt/POINT 
+umount /dev/sdc1
+mount /home/777/image.iso /mnt/ISO
+
+
+
+
+# ACCOUNTs /etc/passwd   /etc/group  
+useradd test
+passwd test
+usermod test
+userdel test
+chfn
+groupadd
+
+sg group.name  # temporary enter in group
+
+
+
+#PERMISSIONS
+ls -l # show permissions 
+#<(-,c,b,d "file,dev,dir.")(rwx "user-owner")(rwx "member of group owner")(rwx "other")>
+#<-rwxrwxrwx>
+chmod               # change permission access to file or dir.
+chown               # change owner file
+chgroup             # change files's group (in some linux)
+umask               # make default permissions on creating file by user
+
+# chmod
+#     `[ugoa...][[+-=][rwxXstugo...]...][,...]'    user,group,other,all
+#     setuid-  or  setgid-bits  (s);  sticky-bit  (t)
+# chown user_owner:group_file file
+
+rwxr-x-wx  is  rwx|r-x|-wx  is 111|101|011 ==> the three digits 753
+---r----x  is  ---|r--|--x  is 000|100|001 ==> the three digits 041
+---------  is  ---|---|---  is 000|000|000 ==> the three digits 000
+rwxrwxrwx  is  rwx|rwx|rwx  is 111|111|111 ==> the three digits 777
+
+PATH ="$PATH:." # exec without ./
+
+
+chvt 3 # switch to term #3
+
+
+
+#---SAMBA-----
+## /etc/samba/smb.comf
+[global]
+; Uncomment this if you want a guest account
+; guest account = nobody
+   log file = /var/log/samba-log.%m
+   lock directory = /var/lock/samba
+   share modes = yes
+
+[homes]
+   comment = Home Directories
+   browseable = no
+   read only = no
+   create mode = 0750
+
+[tmp]
+   comment = Temporary file space
+   path = /home/user
+   read only = no
+   public = yes
+[med]
+   comment = Temporary file space
+   path = /media/Media
+   read only = no
+   public = yes
+
+#--------------------------------
+/etc/init.d/samba restart
+
+mount /dev/sda3 /media/Media -t ntfs -o ownmask=0777  # if you need mount ntfs partition
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+#extract
+tar -xvf file.tar
+
+#input tar
+tar -cvf bar.tar foo
+
+
+
+
+
+smbclient \\\\10.0.0.121\\Лия -U 777 4572
+smbclient -L 10.0.0.121 -U 777
+
+rdesktop 10.0.0.121 -u 777 -p 4572
+
+
+
+
+#--------INTERFACES---
+auto eth0
+allow-hotplug eth0 #detect link
+iface eth0 inet dhcp #enable dhcp client
+#-----
+auto eth0
+iface eth0 inet static
+address 10.0.0.3
+netmask 255.255.255.0
+gateway 10.0.0.1
+newtwork 10.0.0.0
+broadcast 10.0.0.255
+dns-nameservers 8.8.8.8
+pre-up iptables-restore < /etc/iptables.rules
+#----DNS--------------
+   /etc/resolv.conf
+nameserver 8.8.8.8
+#---------------------
+res_init() # reading /etc/resolv.conf
+
+
+
+
+#------subinterface-----
+auto eth0:1
+iface eth0 inet static
+address 10.0.1.3
+netmask 255.255.255.0
+#---------------------
+service networking restart # or # /etc/init.d/networking restart
+
+#---change--hostname-----
+/etc/hostname
+invoke-rc.d hostname.sh start
+
+#---GUI--NetworkManager-----
+# /etc/NetworkManager/NetworkManager.conf
+# managed=true
+
+
+
+
+
+
+
+
+#---ifconfig----------
+ifconfig -a # list of all interfaces (down too)   (more /proc/net/dev)
+ip a
+ifconfig eth0 10.0.0.3 netmask 255.255.255.0
+ifconfig eth0:1 10.0.1.3 netmask 255.255.255.0 up  # subinterface
+ifconfig eth0 down
+ifconfig eth0 -arp
+ifconfig eth0 -promisc #disable promiscous mode (allow frame only with your mac dest. or broadcast)
+
+
+#---route-------------
+route add -net 127.0.0.0 netmask 255.0.0.0 dev lo
+route add -net 192.56.76.0 netmask 255.255.255.0 dev eth0
+route del default  #del current default route
+route add -net 192.168.1.0 netmask 255.255.255.0 gw 10.0.0.1
+
+
+
+
+
+
+
+#---DEvices-----------
+Communication users programs with devices of computer in OS LINUX folowing this cheme
+device <---> CORE <---> dev/file <---> user programm
+
+lshw
+lsusb  # usb devices
+lspci  # pci devices
+lsmod  # installized drivers
+modinfo
+  insmod filename # install mod
+  rmmod filename # del mod
+  modprobe -c # current conf. of all mod
+lscpu  # cpu
+dmesg  # logs of core
+ls /proc/   # current info of system
+dmidecode # BIOS information 
+
+#programm usb "disconnect"
+echo '2-5' > /sys/bus/usb/drivers/usb/unbind
+#programm usb "connect"
+echo '2-5' > /sys/bus/usb/drivers/usb/bind
+# where '2-5' (bus-port) from (lsusb, lsusb -t, ls /sys/bus/usb/devices/)
+
+# another way (Linux CORE with suspend support)
+echo suspend > /sys/bus/usb/devices/«#device#»/power/level
+echo on > /sys/bus/usb/devices/«#device#»/power/level
+
+# allow kernel use IP forwarding (needs for NAT)
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+/etc/acpi/events
+acpi_listen
+man acpid
+#/etc/acpi/lid.sh
+#!/bin/bash
+grep -q closed /proc/acpi/button/lid/*/state
+if [ $? = 0 ]
+then
+mplayer /etc/acpi/close.wav;
+else
+mplayer /etc/acpi/open.wav;
+fi
+
+
+
+
+
+
+# apt-cache search alsa
+# aptitude install alsa-utils alsa-base alsa-tools
+# alsactl init
+alsamixer -V all
+/etc/init.d/alsa restart
+chmod 755 /dev/dsp*
+chmod 755 /dev/audio*
+chmod 755 /dev/mixer*
+chmod 777 /dev/snd/*
+amixer -c 0 -q set Master 3%+ unmute <-- сделать громче на 3%
+amixer -c 0 -q set Master 3%- unmute <-- сделать тише на 3%
+
+
+
+
+
+
+#----DISK-----------
+fdisk -l  # list partition tables
+blkid # information of partition
+fdisk /dev/sd'X' ('X' - actual USB drive)
+m # for help
+d # delete selected partition
+n # create new partition
+p # primary partition
+1 # create first partition
+enter enter to use all space
+a # for active
+1 # bootable
+t # partition type 
+c # fat32 LBA
+w # writw changes
+
+umount /dev/sdc1   # unmount partition
+mkfs.vfat -F 32 -n MULTIBOOT /dev/sdc1 # format partition as fat32
+
+mkdir /mnt/USB && mount /dev/sdc1 /mnt/USB   # mount partition sdc1 (device sdc) to /mnt/USB
+
+grub-install --force --no-floppy --boot-directory=/mnt/USB/boot /dev/sdc   # install grub to /dev/sdc
+
+cd /mnt/USB/boot/grub/
+wget pendrivelinux.com/downloads/multibootlinux/grub.cfg
+cd /mnt/USB/
+
+####--GRUB---###-----------------------------
+# in disk partion#   /boot/grub/grub.cfg
+#-----grub.cfg-------------------------------
+set timeout=10
+set default=0
+menuentry "c_o_r_e" {
+ linux /vmlinuz            # path to kernel
+ initrd /core.gz            # path to (core's)
+}
+#--------------------------------------------
+
+# GRUB's command: (ls, set root, linux, initrd, chainloader +1 boot)
+
+
+
+
+
+#---GRUB-----
+set root (path)
+linux (core)
+initrd (image fs)
+#--grub rescue---
+#allow only (ls,set,unset,insmod)
+set prefix=(hd0,1)/boot/grub 
+set root=(hd0,1)
+
+insmod ext2
+insmod normal
+normal
+#---------------
+menuentry «Microsoft Windows Start» --class windows --class os {
+insmod usbms 
+insmod part_gpt 
+insmod part_msdos 
+insmod fat 
+insmod search_fs_uuid 
+insmod chain 
+search --fs-uuid --no-floppy --set=root A18B-57CD # < — CHANGE THIS TO YOUR UUID
+chainloader (${root})/efi/microsoft/BOOT/bootmgfw.efi
+}
+## add to /etc/grub.d/40_custom
+## blkid (show UUID)
+
+
+
+
+
+#---PROCESESS----
+fuser   # show what process use "this" files,sockets,systems
+lsof
+ps -ax
+top
+jobs
+bg
+fg
+# command &   # run to background
+
+
+
+
+
+
+
+
+#---IPTABLES------------------
+chain INPUT (DROP, REJECT, ACCEPT)
+
+chain FORWARD (DROP, REJECT, ACCEPT)
+
+chain OUTPUT (DROP, REJECT, ACCEPT, DNAT)
+
+chain PREROUTING (DNAT, REDIRECT)
+
+chain POSTROUTING (SNAT, MASQUERADE)
+
+#------------------------------
+#----POLICY--------------------
+iptables -P INPUT ACCEPT
+iptables -P INPUT DROP
+#-----FLUSHING-----------------
+iptables -F  INPUT
+iptables -F  # flush all rules in chains (delete)
+#----RULES---------------------
+iptables -A INPUT -s 10.0.0.121 -p icmp --icmp-type echo-request -j DROP    # drop input icmp from 10.0.0.121
+iptables -A INPUT -p icmp --icmp-type echo-request -j DROP                  # drop input icmp from any
+iptables -A INPUT -s 10.0.0.0/24 -p icmp --icmp-type echo-request -j DROP   # drop input icmp from net
+iptables -A INPUT -m iprange --src-range 10.0.0.1-10.0.0.10 -p icmp --icmp-type echo-request -j DROP
+
+iptables -A INPUT -p tcp -m tcp -m multiport --dports 80,25,110 -j DROP
+iptables -A OUTPUT -p tcp -m tcp -m multiport --dports 80,23,22 -j DROP
+
+#----NUMBERS--chains-----------
+iptables -L --line-numbers
+iptables -D INPUT 1   # delete rule #1 in INPUT chain
+iptables -R INPUT 1 -s 10.0.0.121 -p icmp --icmp-type echo-request -j DROP   # replace rule #1
+iptables -I INPUT 1 -s 10.0.0.120 -p icmp --icmp-type echo-request -j DROP   # insert rule in #1
+
+#---Refrexives--(state ESTABLISHED)
+iptables -A INPUT -s 10.0.0.3 -d 10.0.0.1 -p tcp --dport 22 -m state --state ESTABLISHED -j ACCEPT
+iptables -A INPUT -p tcp --dport 22 -j DROP
+iptables -A OUTPUT -s 10.0.0.3 -d 10.0.0.1 -p tcp --dport 22 -m state --state ESTABLISHED -j ACCEPT
+iptables -A OUTPUT -p tcp --dport 22 -j DROP
+
+#---FORWARDING-----------------
+iptables -P FORWARD DROP
+iptables -A FORWARD -i eth0 -j ACCEPT
+iptables -A FORWARD -o eth1 -j ACCEPT
+
+#---ADVANCE---------------------
+# add comments..!
+iptables -A INPUT -p icmp --icmp-type echo-request -j DROP -m comment --comment "Deny ping"
+# limited session to service port
+iptables -A INPUT -p tcp -syn --dport 22 -m connlimit --connlimit-above 2 -j REJECT
+# redirect traffic receved on 80 to 3128 (Transparent proxy)
+iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j REDIRECT --to-port 3128
+# Prevent DoS attack by limiting sesions per minute (25)
+iptables -A INPUT -p TCP --dport 80 -m limit --limit 25/minute --limit-burst 100 -j ACCEPT
+
+#---NAT-------------------------
+nano /etc/sysctl.conf  # enable forwarding
+# net.ipv4.ip_forward=1
+echo 1 > /proc/sys/net/ipv4/ip_forward
+ip netconf show
+(eth0 192.168.0.0/24 local;  eth1 10.188.106.33 public to internet)
+# allow transit packets throw firewall
+iptables -A FORWARD -i eth0 -o eth1 -s 192.168.0.0/24 -j ACCEPT
+iptables -A FORWARD -i eth1 -o eth0 -d 192.168.0.0/24 -j ACCEPT
+iptables -P FORWARD DROP
+#------nat
+iptables -t nat -A POSTROUTING -s 192.168.0.0/24 -o eth1 -j SNAT --to-source 10.188.106.33
+# or
+iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE
+#------Dnat--Destination NAT (allow from internet connect to 192.168.0.2 server using RDP)
+iptables -t nat -A PREROUTING -i eth1 -p tcp -m tcp --dport 3389 -j DNAT --to-destination 192.168.0.2
+#------forward from 230 to 225
+iptables -t nat -A PREROUTING -p tcp  -d 10.52.100.230 --dport 3389 -j DNAT --to-destination 10.52.100.225:3389
+iptables -t nat -A POSTROUTING -p tcp  -d 10.52.100.225 --dport 3389 -j SNAT --to-source 10.52.100.230
+#--------------------------
+
+
+iptables-save
+iptables-save > /etc/iptables.rules
+
+
+
+
+# delete bloking #-----   /var/lib/dpkg/lock
+fuser -vki /var/lib/dpkg/lock  #say "y"
+
+
+
+
+curl http://ip --user admin:admin   # basic auth curl
+
+
+
+WiFi
+#wep
+ifconfig wlan0 up
+iwconfig wlan0 essid name_1 key s:password
+dhclient wlan0
+----
+iw dev wlan0 scan
+iw phy phy0 interface add wlan1 type managed    #add virtual wireless inteface
+iw dev wlan1 del                                #to del
+
+#wpa
+wpa_passphrase ssid password
+/etc/wpa_supplicant.conf
+Network={ssid=SSID
+psk=PSK}
+ctl_interface=DIR=/var/run/wpa_supplicant GROUP=wheel   #in head
+
+wpa_supplicant -B -Dwext -i wlan0 -c /etc/wpa_supplicant.conf 
+(-Dnl80211)-newer
+#---etc/network/interfaces
+auto wlan0
+iface wlan0 inet dhcp
+pre-up wpa_supplicant -B -Dwext -i wlan0 -c /etc/wpa_supplicant.conf
+post-down killall -q wpa_supplicant
+#-----
+
+
+
+

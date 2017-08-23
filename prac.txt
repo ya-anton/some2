@@ -1,0 +1,248 @@
+Programm RAID (mirorr)
+fdisk /dev/sdb
+t #type of partition  'fd' -linux RAID
+apt install mdadm    # progr raid
+mdadm --create --verbose /dev/md0 --level=1 --raid-devices=2 /dev/sdb1 /dev/sdc1
+cat /proc/mdstat
+cat /etc/mdadm/mdadm.conf
+echo DEVICE partitions > /etc/mdadm/mdadm.conf
+mdadm --detail --scan --verbose >> /etc/mdadm/mdadm.conf
+fdisk /dev/md0  #create partitions and FS
+
+
+#--------
+update-initramfs -u   #md127 --> md0
+
+mdadm --stop /dev/md0
+mdadm --assemble --scan  # build broken RAID (1 of 2)
+mount ...
+
+mdadm /dev/md0 --add /dev/sdc1   # (with fdisk type 'fd')
+
+
+#-------- SAMBA FS
+apt install samba
+/etc/samba/smb.conf
+#------------
+ [global]
+ server string = ...
+ 
+ [Shared name folder]
+ comment = Some shared folder
+ path = /data/shared
+ inherit acls = yes
+ writable = yes
+ 
+ valid users = user
+ read list = user
+ write list = user
+#------------
+testparm   # check smb.conf
+smbpasswd -a user    # add user to samba BD
+#------------
+groupadd Buhs
+useradd -G Buhs buh1 ; passwd buh1
+#------------
+ smb.conf
+ inherit owner = yes  # наследуется владелец (от вышестоящей папки)
+ inherit permissions = yes  # наследуются права
+ force user = user
+ force group = Buhs
+ create mask = 0777
+ write list = user
+#---
+ smb.conf
+ path = /home/user  (chmod 777 /home/user)
+ writable = yes
+ guest ok = yes
+
+
+apt install winbind krb5-user ntp
+
+
+
+
+
+
+
+
+#--mouse--
+apt install gpm
+#--paste--scroll-mouse
+
+
+
+
+
+
+
+
+
+#----APACHE2----
+a2enmod cgi     #enable cgi mod
+
+
+
+
+#---DNSMASQ---
+/etc/dnsmasq.conf
+  bind-interfaces
+  interface=wlp3s0host
+  dhcp-range=192.168.137.11,192.168.137.50,24h
+  dhcp-option=2,255.255.255.0
+  dhcp-option=3,192.168.137.2  #router
+  dhcp-option=6,192.168.137.2  #DNS
+
+
+#---Traffic-control---
+tc qdisc add dev eth0 root handle 1: htb default 900
+tc class add dev eth0 parent 1: classid 1:1 htb rate 100Mbit burst 15k
+tc class add dev eth0 parent 1:1 classid 1:900 htb rate 1Mbit ceil 1Mbit
+tc class add dev eth0 parent 1:1 classid 1:100 htb rate 100Kbit burst 15k
+tc filter add dev eth0 protocol ip parent 1:0 prio 2 u32 match ip dst 10.1.1.1 flowid 1:100
+
+tc -s filter show dev eth0
+tc -s class show dev eth0
+
+iptables -L -v
+ip6tables -L -v
+
+
+
+
+
+ettercap -T -M arp /192.168.137.1/192.168.137.56/
+
+
+
+
+
+
+
+
+
+
+
+
+
+#---OPENVPN---------------------------------------------------
+apt install openvpn
+git clone git://github.com/OpenVPN/easy-rsa
+
+cd easyrsa3/
+cp vars.example vars
+vim vars
+./easyrsa init-pki
+./easyrsa build-ca
+./easyrsa build-server-full servername nopass
+./easyrsa build-client-full clientname nopass
+./easyrsa build-client-full clientname2 nopass
+./easyrsa gen-dh
+openvpn --genkey --secret /etc/openvpn/keys/tlsa.key
+
+###openvpn.conf SERVER----------------------------------------
+proto udp
+port 1194
+dev tun0
+daemon
+server 192.168.11.0 255.255.255.0
+#push "route 192.168.37.0 255.255.255.0"  #to push some routes to clients
+ca /etc/openvpn/easyrsa3/pki/ca.crt
+dh /etc/openvpn/easyrsa3/pki/dh.pem
+cert /etc/openvpn/easyrsa3/pki/issued/servername.crt
+key /etc/openvpn/easyrsa3/pki/private/servername.key
+client-to-client
+client-config-dir /etc/openvpn/ccd
+tls-server
+tls-auth /etc/openvpn/keys/tlsa.key 0
+auth SHA256
+cipher AES-256-CBC
+persist-tun
+persist-key
+comp-lzo
+verb 4
+log-append /var/log/openvpn.log
+status /var/log/openvpn-status.log
+keepalive 10 120
+#tun-mtu 1500
+#mssfix 1450
+#-------------------------------------------------------------
+##PREFERENCES for clients /etc/openvpn/ccd/clientname
+ifconfig-push 192.168.11.2 192.168.11.1  #where .11.1 -server, .11.2 -client
+#push "route 192.168.13.0 255.255.255.0"
+#iroute 192.168.77.0 255.255.255.0
+
+###openvpn.conf CLIENT----------------------------------------
+client
+dev tun0
+proto udp
+remote 194.87.96.195 1194
+auth sha256
+cipher AES-256-CBC
+ca ca.crt
+cert clientname.crt
+key clientname.key
+tls-client
+remote-cert-tls server
+tls-auth tlsa.key 1
+comp-lzo
+persist-key
+persist-tun
+resolv-retry infinite
+nobind
+script-security 2
+up /etc/openvpn/update-resolv-conf
+down /etc/openvpn/update-resolv-conf
+status /var/log/openvpn-status.log
+log /var/log/openvpn.log
+verb 3
+mute 20
+#-------------------------------------------------------------
+
+
+
+
+
+
+InnoDB
+Это многофункциональный движок: транзакции, все ограничения, внешние ключи, связи таблиц и другое, но НЕ поддерживает полнотекстовый индекс. Данный движок в основном направлен на выборку данных, а не на вставку,
+
+MyISAM
+Движок MyISAM направлен на быстрое добавление или изменение данных, однако, он не оптимизирован на выборку; данный движок не поддерживает внешний ключ и транзакции, но поддерживает блокировки и полнотекстовый индекс.
+
+Archive
+Он хранит данные в виде ZIP архива. Размер таблицы, работающей на данном движке, будет очень мал. Однако, из этого следует, что изменение данных будет ОЧЕНЬ медленным. Выборка же данных примерно как у движка MyISAM. У этого движка нет ограничения Primary Key, транзакций и прочего. Основное предназначение данного движка для данных, которые никогда или очень редко меняются. Например, справочники.
+
+CSV
+Данные в данном движке хранятся в таком виде:
+value1,value2,value3
+value1,value2,value3
+Т.е. каждая новая запись с новой строки, а столбцы разделяются запятой.
+В основном данный движок предназначен для совместимости со старыми mainframe записями.
+Внешнего ключа нет, транзакций нет, полнотекстового индекса нет, primary key, unique key есть.
+Скорость выборки примерно как у MyISAM. Врядли вам когда-нибудь придется его использовать.
+
+BDB
+Используется для совместимости с сервером BerkeleyDB. Тоже врядли он вам понадобится.
+
+Memory
+Данный движок хранит все данные в оперативной памяти сервера. На диске он ничего не хранит.
+Данный движок очень быстр как на запись, изменение, удаление данных, так и на их выборку. Однако, вы должны понимать, что данные очень легко потерять.
+Рекомендуется для хранения временных таблиц.
+
+Federated
+Данный движок используется для создания кластерных решений. Это когда несколько серверов подключаются к одному серверу, на котором хранится база данных с этим движком, и каждый из этих серверов считает эту базу данных своей.
+Скорость будет просто огромная, но вы должны понимать, что обычным сайтам это не нужно и используется только на очень высоконагруженных проектах. Плюс ко всему, данный движок является платным.
+
+Blackhole
+Очень интересный движок. Его название переводится как "черная дыра". И это не просто так. Если вы попробуете создать таблицу на этом движке, а потом что-то выбрать из нее, то увидите Empty set. Все, что записывается в таблицу на движке Blackhole, сразу уничтожается.
+Данный движок используется для отладки.
+
+
+
+
+
+
+
+
+

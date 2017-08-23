@@ -1,0 +1,85 @@
+//-------WINDOWs---NETWORKs--------------
+DHCP
+FIREWALL
+APIPA  169.254/16
+RDP, RDP viewer
+mstsc -v ip_host
+ipconfig
+nbtstat -a ip_host
+netstat -b -o
+netsh advfirewall
+
+netsh int ipv4 set add eth0 dhcp
+netsh int ipv4 set add eth0 static 10.52.200.162 255.255.255.128 10.52.200.254
+netsh int ipv4 show int
+netsh int set int eth0 newname=eth1
+netsh int ipv4 set int eth0 forwarding=enable  (forwarding packets to other interfaces)
+netsh int ipv4 set int eth0 advertise=enable   (allow router advertise)
+netsh int ipv4 set int eth0 mtu=               (set mtu of interface)
+netsh int ipv4 set int eth0 retransmittime=__(ms)  
+netsh int ipv4 set int eth0 dadtransmits=__    (sum of retries discover identity address)
+netsh int ipv4 set int eth0 currenthoplimit
+netsh int ipv4 set dynamicportrange           (set(change) of range ports to dynamic setting ports)
+
+netsh int ipv4 sh ipstats 1
+netsh int ipv4 sh icmp 1
+netsh int ipv4 sh tcpstats 1
+netsh int ipv4 sh tcpconnections index=10.0.0.1 389 10.0.0.1 1931
+netsh int ipv4 sh udpstats 1
+netsh int ipv4 sh udpconnections 10.0.0.1 1102
+netsh int ipv4 sh dynamicportrange tcp
+
+
+netsh wlan set hostednetwork mode=allow ssid=linux1 key=12345678 keyUsage=persistent
+netsh wlan start hostednetwork
+route add
+      print
+net user
+net user USERNAME /domain
+net group /domain
+net use M: \\10.52.206.60\������ /user:10.52.206.60\Asus ���
+net session
+net share RESURS=D:\Distr /grant:ngd\lavrov.aa,READ
+compmgmt.msc sethc.exe utilman.exe 
+ftp
+runas
+telnet
+bitsadmin /transfer jobname /download file:\\10.52.206.68\1\1.txt C:\1.txt
+SMB
+
+//--files---
+cd
+dir
+more
+echo
+chcp 1251
+attrib
+del
+>, >>, <, <<
+
+//---process's-----
+tasklist
+taskkill -IM 123.exe -f (-f -- force, or without -f)
+//---log-----
+logman
+
+
+
+
+
+HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp.
+
+Выбираем параметр PortNumber, переключаемя в десятичный формат и задаем любой порт (в пределах разумного).
+
+
+//hide bat console
+set wshshell = createobject("WScript.Shell")
+wshshell.Run chr(34) & "1.bat" & chr(34), 0
+set wshshell = Nothing
+
+
+
+snmpset -v1 -O v -c public 10.52.206.13 1.3.6.1.4.1.19707.7.7.2.1.4.102.0 i 1
+
+
+netsh int portproxy add v4tov4 listenport=81 listenaddress=127.1 connectport=80 connectaddress=8.8.8.8

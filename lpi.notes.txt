@@ -1,0 +1,544 @@
+==========LPI-1==========
+===101-1.HARDWARE===
+/sys   SYS.FS
+База данных подключенных устройств
+ devices/ все устройства ядра
+ bus/     перечень шин
+ drivers/ каталоги драйверов
+ block/   каталоги блочных устройств
+ class/   группировка устройств по классам
+/proc  PROC.FS
+Информация о состоянии ОС и всех запущенных процессах
+/dev
+Информация об интерфейсах работы с драйверами ядра
+Работа с модулями ядра
+lsmod                   – информация о модулях ядра;
+lspci                   – информация об устройствах PCI;
+lspcmciа                – информация об устройствах PCMCIA;
+lsusb                   – информация о шине USB;
+lshw                    – детальная информация о комплектующих;
+rmmod                   – удалить модуль;
+insmod                  – установить модуль;
+modprobe module.name    – установить модуль и все зависимости
+modinfo module.name
+/lib/modules/4.8.0-39-generic/kernel/drivers/  модули ядра
+/proc/interrupts                               прерывания
+/proc/ioports                                  порты для работы устр. и CPU
+/proc/iomem
+/proc/dma                                      обращ. к RAM минуя CPU
+
+PATA, SATA, SCSI, SAS (замена SCSI)
+
+blkid  - locate/print block device attributes
+lsblk  - list block devices
+
+
+===101-2.BOOTING===
+dd if=/dev/sda (of=/tmp/IMAGE) bs=512 count=1 | (file -) strings
+dmesg
+/var/log/dmesg   информация только о загрузке
+
+параметры ядра (некоторые) (int 0-6 - runlevel)
+  root=/dev/sda1    Позволяет указать корневую файловую систему
+  ro                Монтирует корневую ФС на "только чтение"
+  rw
+  init=/sbin/init   Позволяет задать программу инициализации
+  memtest          
+  rescue            Восстановление уставленной ОС
+
+systemd (параллельный запуск)
+upstart (на основе отслеживания событий)
+
+
+===101-3.INITIALIZATION===
+
+===SysV(init)===
+runlevels
+ 0 – выключение;
+ 1 – однопользовательский режим;
+ 2 – Debian/Ubuntu по умолчанию (GUI или CUI);
+ 3 – RedHat/Suse по умолчанию (режим CUI);
+ 4 – WildCard (программируемый режим);
+ 5 – RedHat/Suse по умолчанию (режим GUI);
+ 6 – перезагрузка
+/etc/inittab 
+  id:3:initdefault:  (уровень загрузки по умолчанию - третий);
+/etc/init.d/         скрипты для запуска служб
+/etc  rc0.d, rc1.d   ссылки на скрипты при переключении в разные runlevel
+  K - kill, S - start (в названии ссылки + последовательность)
+init 1 или telinit 1     - v runlevel 1
+runlevel             current runlevel
+service имя_демона (start,status,stop,restart,reload)
+update-rc.d script1 defaults  #авторан
+update-rc.d -f script1 remove
+/etc/init.d/script1
+  #!/bin/sh
+  /path/script
+
+===systemd===
+ /usr/lib/systemd/    автоматически после установки пакетов 
+ /etc/systemd/system/ (для ОС в целом)
+ /etc/systemd/user/   (для пользователей)
+systemctl list-units           (показать запущенные юниты);
+systemctl list-units --type=service
+systemctl status crond
+         Runlevel     Target           
+       ├─────────┼───────────────────┤
+       │0        │ poweroff.target   │
+       ├─────────┼───────────────────┤
+       │1        │ rescue.target     │
+       ├─────────┼───────────────────┤
+       │2, 3, 4  │ multi-user.target │
+       ├─────────┼───────────────────┤
+       │5        │ graphical.target  │
+       ├─────────┼───────────────────┤
+       │6        │ reboot.target  
+systemctl isolate reboot.target       (переключиться reboot.target)
+systemctl enable some.service  #autorun
+systemctl set-default -f multi-user.target  (multi-user по умолчанию)
+systemctl reboot      (перезагрузить ПК)
+systemctl poweroff    (выключить ПК)
+journalctl –f          (в режиме реального времени);
+journalctl -n 10        (10 последних сообщений);
+journalctl _UID=70     (вывод сообщений польз. с ID=70)
+
+===Upstart===
+Upstart оперирует понятиями
+ (service), поддерживаемая в постоянном режиме работы
+ (task), выполняющаяся разово
+/etc/init/  файлы конфигурации (jobs)
+runlevel и telinit продолжают работать
+initctl start networking   (запустить службу сети)
+initctl list               (вывести перечень служб)
+/etc/init/rc-sysinit.conf  Уровень инициализации по умолчанию
+   env DEFAULT_RUNLEVEL=2
+status name.service
+start name.service
+stop name.service
+#----/etc/init/myjob.conf
+    description "myjob"
+    start on startup
+    start on runlevel [2345]
+    task
+    exec bash /path/script.sh
+
+
+===102-1.INITIALIZATION===
+/     – корневая файловая система, самый большой раздел;
+/boot – загрузочный раздел;
+/home – домашние папки;
+/root – домашняя папка суперпользователя;
+/etc  – конфигурация системы и ее компонентов;
+/opt  – папка для ПО от третьих поставщиков;
+/var  – часто изменяемые данные;
+/usr  – все установленные пакеты, документация, исходный код ядра;
+/tmp  – временные файлы;
+ swap – раздел подкачки, никуда не монтируется
+==/boot==
+abi-..    функции и библиотеки, через которые к ядру обращаются приложения;
+config-.. файл параметров, при которых создано текущее ядро;
+initrd.img-… образ стартовой корневой системы, загружающийся в ОЗУ;
+memtest…  файлы ПО проверки ОЗУ;
+system.map..    карта аппаратных адресов системы;
+vmlinuz..  ядро
+
+основные (primary) разделы - не больше 4                   
+расширенный (extended)- может содержать более 4 логических (logical) 
+sda1-4 - для основных разделов
+sda5-..  для логических
+fdisk -l просмотр существующих
+fdisk /dev/sdb            (use m for help) n-новый, t-изм.id раздела
+mkfs.(ext4,..) /dev/sdb5  форматирование
+swapon /dev/sdb2, swapoff           включать,выключать swap разделы
+mkswap/dev/sdb2
+/etc/fstab  монтирование фс при загрузке 
+blkid       UUID разделов
+==LVM==
+fdisk /dev/sdb       для созданных..t-изм.id раздела (Linux LVM)
+pvdisplay            отобразить физические тома
+pvcreate /dev/sdb1   создание "физического" тома
+vgcreate vg_name /dev/sdb1 /dev/sdb2  создание volume group 
+(--||-- /dev/sdb1,2 - физ.том)
+lvcreate -n lv1 -L 2G vg_name         создание "логического" тома
+mkfs.(ext4,..) /dev/vg_name/lv1       форматирование..
+lvresize -L 4G vg_name/lv1            изменение размера тома на лету
+
+
+===102-2.GRUBs lilo===
+MBR, GPT, BIOS, UEFI
+fdisk -l * - загруз. сектор
+dd if=/dev/sda of=/root/backup.mbr bs=512 count=1    сделать backup mbr & part table
+dd if=/path/to/image of=/dev/sdx   bs=446 count=1    восст.только MBR
+===lilo===
+liloconfig
+ls /dev/disk/by-id
+/etc/lilo.conf
+  boot=/de-v/disk/by-id/(name_from_ ls /dev/disk/by-id)
+lilo      применить
+===GRUB legasy===
+/boot/grub/menu.lst
+  root (hd0,1)
+  kernel /vmlinuz root=/dev/sda1 
+  initrd initrd_file
+===GRUB 2====
+grub-install /dev/sda
+update-grub           apply changes
+grub-mkconfig         autocreate grub.cfg
+/boot/grub/grub.cfg
+/etc/default/grub     grub config
+/etc/grub.d/          grub scripts
+
+
+===102-3.LIBS===
+статические и динамические
+/lib         библиотеки для /bin;
+/usr/lib     библиотеки для /usr/bin;
+/etc/ld.so.conf (по умолчанию это /etc/ld.so.conf.d) прочие
+/etc/ld.so.cache  Активные библиотеки располагаются в кэше
+ldconfig          обновить кэш
+ldd /bin/file     список используемых библиотек
+LD_LIBRARY_PATH   набор возможных расположений библиотек в переменной
+export LD_LIBRARY_PATH=/opt/soft/lib ; ldconfig  добавить вручную
+
+
+===102-4.DPKG, APT===
+/etc/dpkg/dpkg.cfg
+dpkg –l            (вывести информацию об установленных пакетах);
+dpkg –L firefox    (файлы пакета);
+dpkg –s firefox    (статус пакета firefox);
+dpkg –p firefox    (информац. пакета firefox);
+dpkg –I firefox.deb    (информац. о пакет firefox.deb);
+dpkg –S /bin/ls    (в состав какого пакета входит программа);
+dpkg –i webmin     (установить webmin);
+dpkg –r webmin     (удалить webmin);
+dpkg –P webmin     (удалить webmin вместе с конф.файлами);
+dpkg-reconfigure webmin   (переустановить webmin);
+
+apt-get install packet
+apt-get remove packet
+apt-get autoremove     удалить неиспольз. зависимости
+apt-cache search some.word
+apt-cache show packet
+apt-cache depends packet
+apt-cache rdepends packet    что завиcит от packet
+apt-get update
+apt-get upgrade
+/etc/apt/apt.conf
+/etc/apt/sources.list
+  deb url описание_дистр. 
+       main(full_free) 
+       restricted(part_free) 
+       universe(управл.сообществом и не подд.офиц.)
+       multiverse(non-free)
+
+
+===102-5.RPM YUM REDHAT===
+rpm –i webmin            (установить пакет webmin);
+rpm –e webmin            (удалить пакет webmin);
+rpm –V openssh-client    (проверить пакет openssh-client);
+rpm –qa                  (показать установленные пакеты);
+rpm –qi packet           (показать инф. о пакете);
+rpm2cpio ssh.rpm > bin.cpio  распаковать в cpio
+
+yum install packet
+yum remove packet
+yum search vim            (найти vim)
+yum upgrade               (обновить пакеты ПО)
+/etc/yum.conf
+/etc/yum.repos.d/CentOS-Base.repo  каждый репозиторий в отдельном файле
+yumdownloader resolve openssh  (скачать openssh и все зависимости без установки)
+
+
+===103-1.ENV BASH===
+cat /etc/passwd | grep bin
+/etc/profile      глобальные настройки оболочки
+~/.profile        настройки пользователя
+~/.bashrc
+for i in $(ls /lib); do echo $i ; done    цикл for
+env                  переменные среды
+abc=777
+export abc           добавить в env переменную abc
+unset abc            убрать abc
+PATH=$PATH:.         
+touch {1,2,3}.txt    создать три файла 1.txt 2.txt 3.txt
+man -k http          поиск man по http
+exec ls -a           выполнить ls -a игнорируя настройки профиля
+$?                   код ошибки
+prog1 || prog2   если нет
+prog1 && prog2   если да
+
+
+===103-2.PIPE lines===
+sed, awk, cut, paste, fmt, nl, etc.. editors
+| cut -d ' ' -f2,3,4
+| cut -c 2 (-b 2)  второй символ (байт)
+fmt 1.txt       (вывести содержимое файла в одну строку);
+fmt –w 10 1.txt (содержимое файла в строки не больше 10 символов каждая);
+od –c 1.txt     (отобразить в кодировке ASCI); (-t d,f,..)
+
+
+===103-3.actions with FILES===
+Групповые символы
+    *           – все что угодно;
+    ?           – любой символ;
+    !           – не;
+    [ac]        – a или c;
+    [a-c]       – a, b, c.
+find . –name “*A*”
+find /etc –size -5M    файлы меньше 5МБ
+find . –type l         (искать ссылки)
+find .  –name “*.txt” | cpio –o > ../test.cpio   запаковать
+cpio -id < test.cpio         (распаковать “test.cpio”создавая директории)
+dd if=/dev/sdb of=drive.img  (скопировать /dev/sdb в образ drive.img)
+gzip drive.img     (сжать “drive.img” до “drive.img.gz” удалив исходный)
+gunzip
+bunzip2 drive.img.bz2        (распаковать архив “drive.img.bz2”)
+xz
+unxz drive.img.xz            (распаковать архив “drive.img.xz”)
+tar cvf arch.tar  folder     (упаковать “folder” в архив “arch.tar”)
+tar –xvf archive.tar         (распаковать архив “archive.tar”)
+  -a, --auto-compress        use archive suffix to determine the compression program
+  -j, --bzip2                пропустить архив через bzip2
+      --lzma                 filter the archive through lzma
+      --use-compress-program=ПРОГ   пропустить архив через ПРОГ (должна поддерживать -d)
+  -z, --gzip, --gunzip, --ungzip   пропустить архив через gzip
+  -Z, --compress, --uncompress   пропустить архив через compress
+  -J, --XZ
+
+
+===103-4.PIPE lines===
+tee, xargs, |, >>, > , <, 2>&1
+
+
+===103-5.Proccess===
+source command (. command)
+fg, bg, jobs, &
+ps aux; pa -A
+kill pid.number; killall name
+nohup sleep 100 & 
+pstree
+pgrep sleep     получить pidы 
+pgrep sleep -l  +имена
+pgrep -u user -l 
+pkill sleep
+top (sort: <,> k: sigterm -15, sigkill -9)
+uptime  (load average: 1min, 5min, 15min)
+w
+free
+screen  (command; ctl+a; d)
+screen -r
+screen -S name1 command
+screen -ls
+
+posix_signals
+https://ru.wikipedia.org/wiki/Сигналы_(UNIX)
+SIGKILL  9   Безусловное завершение
+SIGTERM  15  Сигнал по умолчанию kill
+SIGINT   2   Сигнал прерывания CTRL-C 
+SIGSTOP  23  Остановка выполнения процесса
+SIGTSTP  20  Остановка с терминала CTRL-Z
+SIGCOUNT 25  Продолжить выполнение 
+SIGQUIT  3   CTRL-\ Заверш.с дампом памяти
+SIGCHLD  18  Сигнал заверш.дочернего процесса
+
+
+
+===103-6.NICE.RENICE===
+-20..+19 (20 freeBSD)
+ps alx   с приоритетом NI  or top
+ps -eo user,pid,pcpu,nice,comm  выбор столбцов
+NI=0 default
+NI=10 default with nice
+nice sleep 100 &
+nice -n -15 seep 100 &
+### NI<0 может уст.только root
+renice 5 -p pid.proc
+renice 5 -u user
+
+
+===103-7.REGEXP===
+^   - начало строки;
+$   - конец строки;
+.   - любой символ;
+\<a - слово, начинающееся с “a”;
+\>a - cлово, заканчивающееся на “a”;
+[a-z] - диапазон от “a” до ”z”;
+[az]  - a or z
+[^t]  - не буква ”t”
+rgrep exp path.file
+grep exp path.file
+egrep exp path.file
+fgrep part.word path.file
+|sed /cdrom/d
+|sed s/qq/aa/g
+
+
+===103-8.VI===
+hjkl -navigation
+eb слово
+() предложение
+{} абзац
+^$ строка
+1G,G файл
+    i    (режим вставки перед текущим символом);
+    a    (режим вставки после текущего символа);
+    o    (вставить новую строчку);
+    s    (стереть символ и вставить).
+yw         (скопировать слово);
+dd         (вырезать строку);
+cl         (изменить символ);
+d$         (удалить с текущего места до конца строки);
+y}         (скопировать с текущего места до конца абазца);
+cw,cl,c),c},cG - изменение
+==  yy, yG, y), p, etc..
+esc - navigation, : - command (wq!(ZZ), q!, w!, e!(ZQ))
+searching down the text
+/part.word (n - next,N - back)
+searching up the text
+?part.word (n - next,N - back)
+
+
+===104-1.PARTED.GPT===
+fdisk                       # MBR
+gdisk /dev/sdb (? - help)   # GPT
+parted -l                список
+parted /dev/sdb          
+gparted
+
+
+===104-2.CHECK FS===
+df -h
+df -i   показать айноды
+обычно отдается 1% пространства
+du -h
+du -hs /path.to.file/*    не выводить вложенные
+ls -i   показать айноды файлов
+fsck /dev/sdb1   проверить на целостность несмонтированные ФС
+  e2fsck
+fsck -t ext4 /dev/sdb1
+xfs_check /dev/sdb1
+xfs_info /dev/sdb1
+xfs_metadump
+
+debugfs -w /dev/sdb1
+ ls
+ rm file.name
+ lsdel
+ undel <12> new.name  #12-file's ionod
+
+dumpe2fs /dev/sdb1    вывести информацию о файловой системе
+tune2fs –O has_journal /dev/sdb1   включить журналирование
+tune2fs –O ^has_journal /dev/sdb1  выключить журналирование
+
+
+===104-3.MOUNTING FS===
+mount device point
+umount point_or_device
+/etc/fstab
+ #options rw, ro, auto, default, user, exec, etc..
+blkid /dev/sdb1
+#udf,cdfs,iso9660 #fs CDROM
+eject sda1   извлечь)
+
+
+===104-4.QUOTA===
+apt install quota
+/etc/fstab
+  #options usrquota,grpquota
+quotaoff /point
+quotacheck -cug /point
+ls /point  #aquota.user, aquota.group
+edqouta -u user (-t)
+  #soft, hard
+qoutaon /point
+repqouta /point   отчет по квотам
+
+
+===104-5.CHMOD===
+chown,chgrp,chmod
+id user
+-rw-r--r-- 1 owner group.owners file.name
+chown owner2 file.name
+chown owner2:group2.owners file.name
+chown -R owner folder
+stat file.name   посмотреть права на файл
+umask       отобразить значение umask
+umask 001   изменить значение umask
+/etc/login.defs  #UMASK 022
+максимальные default права для папок 777, для файлов 666
+default права при создании 666-umask, 777-umask
+ suid   4  бит запуска от owner            chmod u+s file
+ sgid   2  бит запуска от group.owners     chmod g+s file
+ sticky 1  бит защиты содержимого          chmod o+t file
+для папок: sgid (вкл.наследов.gid),sticky (только owner может изм.содерж.)
+
+
+===104-6.LINKS===
+HARDLINK файл с таким же inod (нельзя созд.на каталоги)
+SYMLINK  ссылка (опирается на название)
+ln file name.link
+ln -s file name2.link
+
+
+===104-7.FHS Searching===
+FHS - стандарт иерархии файлов и папок
+grep     поиск по содержимому
+find     по свойствам
+locate   быстрый поиск
+which    поиск команды
+type     вывод точной команды с параметрами(не alias)
+whereis  вывод команды, исходников, мануала
+
+locate file
+  /etc/updatedb.conf
+  updatedb
+
+
+
+
+
+
+split -l 200 file
+split -b 50k file.txt  (--bytes)
+$HISTSIZE
+grep -v
+4 primary
+tar -cj
+sed '/line/d'
+ps t  #this terminal
+ps -e = ps -A
+touch -c file # dodn't create
+man -f command ; man -k key.word
+PS1,PS2,PS3,PS4
+rm -rf dir{1,2}
+
+. - (точка) соответствует любому символу.
+{} - (фигурные скобки) нужны для обозначения количества необходимых символов. Например, w{3} - три буквы w подряд. Также есть диапозон z{2,5}, то есть z может повторяться от 2 до 5 раз.
+| - (вертикальная черта) логическое или в регулярных выражениях.
+\n - перевод строки
+\r - так же перевод строки
+\t - табуляция
+\d - цифра
+\D - только не цифра
+\s - пробел
+\S - только не пробел
+\w - все буквы, цифры и знак подчеркивания &quot;_&quot;
+\W - только не буква, цифра или подчеркивание
+
+cp -n  не перезаписывать существующий
+cp -u  обновить, если файл более новый
+echo stroka 1 | tr -s stroka line    (критичен к длине замены)
+tr -d  delete
+tail -n 5 file = tail --lines=5 file
+dd of=file1 if=/dev/zero count=2048 bs=512 
+
+/etc/apt/sources.list.d/ 
+apt-cdrom add 
+cat > text.txt << EOF
+kill -l    list signals
+
+
+
+/etc/sysctl.conf
+net.ipv4.ip.forward=1
+sysctl -p
