@@ -1,4 +1,4 @@
-//-------WINDOWs---NETWORKs--------------
+//-------WINDOWs---notes--------------
 DHCP
 FIREWALL
 APIPA  169.254/16
