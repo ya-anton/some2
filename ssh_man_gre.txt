@@ -1,0 +1,51 @@
+﻿ssh user@10.52.100.230
+scp /home/user/files user2@10.52.100.232:/home/user2/
+#putty
+pscp C:\user\files user2@10.52.100.232:/home/user2/
+#from putty to server
+ssh-keygen -i -f /home/user/k.p > /home/user/.ssh/authorized_keys
+#generate new keys on server
+ssh-keygen -t rsa -f /etc/ssh/ssh_KEYS_rsa_key
+
+
+#tunnels
+#forward to local socket from remote
+ssh -L 127.1:8080:10.52.100.230:80 user@10.52.100.230
+#forward to remote (2323) socket from local (23)
+ssh -R 127.1:2323:10.52.107.10:23 user@10.52.100.230
+#forward dynamic SOCKS ports #config Browsers and apps
+ssh -D 127.1:8080 user@10.52.100.230  # -g -allow other hosts connect to port
+
+#L3 SSH VPN (using tun)
+ip tuntap add dev tun0 mode tun   #on both
+ip a a 192.168.1.1/24 dev tun0  #local
+ip a a 192.168.1.2/24 dev tun0  #remote
+#PermitTunnel yes  #/etc/ssh/sshd_config on both #only L3
+ssh -f -w 0:0 root@remoteserver true    #(tun0:tun0)
+
+#L2 SSH VPN (using tap)
+ip tuntap add dev tap0 mode tap   #on both
+ifconfig tap0 192.168.1.1 netmask 255.255.255.0  #local
+ifconfig tap0 192.168.1.2 netmask 255.255.255.0  #remote
+ethtool tap0  #to check
+ssh -o Tunnel=ethernet -f -w 0:0 root@remoteserver true
+
+
+#GRE tunnels L2
+HOST1: ip link add grelan type gretap local 1.2.3.4 remote 2.3.4.5
+HOST1: ip link set grelan up
+HOST1: iptables -I INPUT -p gre -s 2.3.4.5 -j ACCEPT
+HOST2: ip link add grelan type gretap local 2.3.4.5 remote 1.2.3.4
+HOST2: ip link set grelan up
+HOST2: iptables -I INPUT -p gre -s 1.2.3.4 -j ACCEPT
+HOST1: ip addr add 192.168.0.1/24
+HOST2: ip addr add 192.168.0.2/24
+#L3
+ip tunnel add tun0 mode ipip remote 10.1.1.1 local 10.2.2.2 dev eth0
+ifconfig tun0 192.168.0.1 netmask 255.255.255.252 pointopoint 192.168.0.2
+ifconfig tun0 mtu 1500
+ifconfig tun0 up
+
+
+
+
