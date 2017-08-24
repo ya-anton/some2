@@ -5,3 +5,39 @@ git commit -m "first commit"
 git remote add origin https://github.com/ya-anton/some2.git
 git push -u origin master
 
+
+
+
+git push shared master
+
+git remote add shared some/adress/hello.git
+
+git checkout -b style
+
+git log --graph
+
+git pull
+
+git checkout style1
+git merge master
+
+git clone --bare hello hello.git
+
+git reset --hard <hash>
+
+git checkout style1
+git rebase master
+
+git branch -a
+
+git fetch
+git merge origin/master
+
+git pull
+
+git branch --track style origin/style    #watching branch
+
+git daemon --verbose --export-all --base-path=.
+git clone git://localhost/hello.git network_hello
+
+
