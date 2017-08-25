@@ -296,8 +296,8 @@ cd /mnt/USB/
 set timeout=10
 set default=0
 menuentry "c_o_r_e" {
- linux /vmlinuz            # path to kernel
- initrd /core.gz            # path to (core's)
+ linux /vmlinuz root=/dev/sda1           # path to kernel
+ initrd /core.gz                       # path to (core's)
 }
 #--------------------------------------------
 

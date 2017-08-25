@@ -1,0 +1,46 @@
+curl -d "param1=value1&param2=value2" -X POST http://localhost:3000/data
+
+curl -d "param1=value1&param2=value2" -H "Content-Type: application/x-www-form-urlencoded" -X POST http://localhost:3000/data
+
+curl -d "@data.txt" -X POST http://localhost:3000/data
+
+curl -d '{"key1":"value1", "key2":"value2"}' -H "Content-Type: application/json" -X POST http://localhost:3000/data
+
+curl -d "@data.json" -X POST http://localhost:3000/data
+
+
+
+server.js
+var app = require('express')();
+var bodyParser = require('body-parser');
+
+app.use(bodyParser.json()); // for parsing application/json
+app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
+
+app.post('/data', function (req, res) {
+  console.log(req.body);
+  res.end();
+});
+
+app.listen(3000);
+
+
+
+
+
+curl -o website https://domain.com
+
+curl -O https://domain.com/file.zip
+
+curl -I http://domain.com   #get header
+
+curl ftp://ftp.domain.com --user username:password
+
+curl -T file.zip ftp://ftp.domain.com/ --user username:password   #to upload
+
+curl -u myusername:mypassword http://example.com
+
+curl --cert client.pem --key key.pem --insecure https://example.com
+
+
+
